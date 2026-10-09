@@ -1,0 +1,28 @@
+{
+    "name": "friendsofredaxo/image_editor",
+    "description": "Bilder zerstörungsfrei bearbeiten für REDAXO 6: Zuschneiden, Drehen, Spiegeln, Ausrichten, Entzerren – im Medienpool und für andere Addons",
+    "type": "redaxo-addon",
+    "license": "MIT",
+    "authors": [
+        {"name": "Thomas Skerbis", "homepage": "https://klxm.de"},
+        {"name": "Friends Of REDAXO", "homepage": "https://friendsofredaxo.github.io"}
+    ],
+    "require": {
+        "php": "^8.5",
+        "ext-gd": "*",
+        "redaxo/core": "^6.0@dev"
+    },
+    "suggest": {
+        "ext-imagick": "Entzerren großer Bilder schneller und genauer"
+    },
+    "autoload": {
+        "psr-4": {
+            "FriendsOfRedaxo\\ImageEditor\\": "src/"
+        }
+    },
+    "extra": {
+        "redaxo": {
+            "addon-class": "FriendsOfRedaxo\\ImageEditor\\ImageEditorAddon"
+        }
+    }
+}
