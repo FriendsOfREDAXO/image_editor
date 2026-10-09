@@ -35,6 +35,7 @@ final class Api extends ApiFunction
             }
             $data = match (Request::post('action', 'string', 'info')) {
                 'save' => ImageEditor::save($file, json_decode(Request::post('ops', 'string', ''), true) ?? []),
+                'adjust' => ImageEditor::saveAdjust($file, Request::post('fx', 'string', ''), json_decode(Request::post('focus', 'string', ''), true), Request::post('fit', 'string', 'cover')),
                 default => ImageEditor::info($file),
             };
             self::send(['ok' => true, 'item' => $data]);

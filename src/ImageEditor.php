@@ -149,6 +149,7 @@ final class ImageEditor
         foreach (['jpg', 'png'] as $ext) {
             @unlink(Path::addonData('image_editor', 'master/' . $file . '.' . $ext));
         }
+        $keep = array_intersect_key(self::stored($file), array_flip(['fx', 'focus', 'fit']));
         $stored = null;
         if ([] !== $clean) {
             $src = Path::media($file);
@@ -171,14 +172,79 @@ final class ImageEditor
             if (!$ok) {
                 throw new RuntimeException('Die bearbeitete Fassung konnte nicht gespeichert werden.');
             }
-            $stored = json_encode(['ops' => $clean, 'orig' => ['w' => $ow, 'h' => $oh], 'at' => time()], JSON_UNESCAPED_SLASHES);
+            $stored = ['ops' => $clean, 'orig' => ['w' => $ow, 'h' => $oh]];
         }
-
-        Sql::factory()->setQuery('UPDATE rex_media SET ' . self::COLUMN . ' = ? WHERE filename = ?', [$stored, $file]);
-        MediaManager::deleteCache($file);
-        Media::clearInstances($file);
+        self::store($file, null !== $stored ? $stored + $keep : $keep);
 
         return self::info($file);
+    }
+
+    /**
+     * Anpassen (Effekte, Sättigung, Helligkeit, Kontrast, Schärfe), Fokuspunkt und Einpassen speichern.
+     *
+     * @return array<string, mixed> Angaben für den Editor (info())
+     */
+    public static function saveAdjust(string $file, mixed $fx, mixed $focus, mixed $fit): array
+    {
+        $media = Media::get($file) ?? throw new RuntimeException('Bild nicht gefunden.');
+        if (null !== ($why = self::editable($media))) {
+            throw new RuntimeException($why);
+        }
+        $clean = Adjust::normalize($fx);
+        if (null === $clean) {
+            throw new RuntimeException('Ungültige Anpassung.');
+        }
+        $data = self::stored($file);
+        unset($data['fx'], $data['focus'], $data['fit']);
+        if ('' !== $clean) {
+            $data['fx'] = $clean;
+        }
+        if ($f = Adjust::focus($focus)) {
+            if (50.0 !== $f['x'] || 50.0 !== $f['y']) {
+                $data['focus'] = $f;
+            }
+        }
+        if ('cover' !== ($m = Adjust::fit($fit))) {
+            $data['fit'] = $m;
+        }
+        self::store($file, $data);
+
+        return self::info($file);
+    }
+
+    /** Angaben speichern (leer = Spalte leeren), Cache des Media Managers leeren */
+    private static function store(string $file, array $data): void
+    {
+        $data = array_filter($data, static fn ($v) => null !== $v && [] !== $v && '' !== $v);
+        if ($data) {
+            $data['at'] = time();
+        }
+        Sql::factory()->setQuery('UPDATE rex_media SET ' . self::COLUMN . ' = ? WHERE filename = ?', [$data ? json_encode($data, JSON_UNESCAPED_SLASHES) : null, $file]);
+        MediaManager::deleteCache($file);
+        Media::clearInstances($file);
+    }
+
+    /** Anpassung (kanonisch, '' = keine) */
+    public static function fx(string $file): string
+    {
+        return Adjust::normalize(self::stored($file)['fx'] ?? '') ?? '';
+    }
+
+    /**
+     * Fokuspunkt und Einpassen für die Ausgabe: style-Angaben für <img> (object-position/-fit) – leer = Standard des Kits.
+     */
+    public static function imgStyle(string $file): string
+    {
+        $d = self::stored($file);
+        $css = [];
+        if ($f = Adjust::focus($d['focus'] ?? null)) {
+            $css[] = 'object-position:' . $f['x'] . '% ' . $f['y'] . '%';
+        }
+        if ('contain' === Adjust::fit($d['fit'] ?? '')) {
+            $css[] = 'object-fit:contain';
+        }
+
+        return implode(';', $css);
     }
 
     /**
@@ -197,11 +263,17 @@ final class ImageEditor
             'display' => '' !== $media->title ? $media->title : $file,
             'url' => self::url($file, 1280),
             'thumb' => self::url($file, 320),
+            'base' => MediaManager::getUrl('image_editor_base', $file, max((int) (self::stored($file)['at'] ?? 0), $media->updateDate)),
             'original' => $media->getUrl(),
             'width' => $w,
             'height' => $h,
             'original_size' => ['w' => (int) $media->width, 'h' => (int) $media->height],
             'edit' => [] !== $ops ? $ops : null,
+            'fx' => self::fx($file),
+            'fx_label' => Adjust::label(self::fx($file)),
+            'focus' => Adjust::focus(self::stored($file)['focus'] ?? null) ?? ['x' => 50, 'y' => 50],
+            'fit' => Adjust::fit(self::stored($file)['fit'] ?? ''),
+            'presets' => Adjust::PRESETS,
             'editable' => self::editable($media),
             'pool' => false,
         ];

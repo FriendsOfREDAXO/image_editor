@@ -131,3 +131,25 @@
 /* Medienpool: Vorschau der bearbeiteten Fassung */
 .image-editor-preview img { display: block; max-width: 100%; height: auto; border-radius: 4px; }
 .image-editor-panel .ie-bar { margin-top: 8px; }
+
+/* ------------------------------------------------------------ Dialog „Bild anpassen“ (Effekte, Fokus, Einpassen) */
+.ia .ie-tabs button[aria-selected="true"] { background: var(--adm-ink); color: var(--adm-on-ink); }
+.ia-stage { display: grid; place-items: center; padding: 16px; }
+.ia-pic { position: relative; display: inline-block; max-width: 100%; max-height: 100%; cursor: crosshair; }
+.ia-pic img { display: block; max-width: 100%; max-height: min(64vh, 680px); user-select: none; }
+.ia-dot { position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px; border: 3px solid #fff; border-radius: 50%; box-shadow: 0 0 0 2px rgba(0,0,0,.55), 0 2px 8px rgba(0,0,0,.4); pointer-events: none; }
+.ia-h { margin: 14px 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--adm-t3); }
+.ia-h:first-child { margin-top: 0; }
+.ia-presets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.ia-preset { display: grid; gap: 4px; padding: 4px; border: 2px solid transparent; border-radius: 8px; background: none; cursor: pointer; font: 600 11.5px var(--adm-font); color: var(--adm-ink); }
+.ia-preset.is-on { border-color: var(--adm-a); }
+.ia-preset__pic img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 5px; }
+.ia-range { display: grid; grid-template-columns: 90px 1fr 56px; align-items: center; gap: 8px; margin: 8px 0; font: 600 13px var(--adm-font); }
+.ia-range output { text-align: right; font-variant-numeric: tabular-nums; color: var(--adm-t2); }
+.ia-fit { display: flex; gap: 8px; align-items: flex-start; margin: 6px 0; cursor: pointer; }
+.ia-fit small { display: block; color: var(--adm-t3); font-size: 12px; }
+.ia-frames { display: grid; grid-template-columns: 1.6fr 1fr .8fr; gap: 8px; align-items: end; }
+.ia-frame { display: grid; gap: 2px; text-align: center; }
+.ia-frame img { width: 100%; border-radius: 4px; background: repeating-conic-gradient(#e7e9ee 0 25%, #fff 0 50%) 0 0 / 12px 12px; }
+.ia-frame--16-9 img { aspect-ratio: 16/9; } .ia-frame--1-1 img { aspect-ratio: 1; } .ia-frame--4-5 img { aspect-ratio: 4/5; }
+.ia-frame small { font-size: 11px; color: var(--adm-t3); }
