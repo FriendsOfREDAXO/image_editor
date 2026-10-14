@@ -387,4 +387,100 @@ final class ImageEditor
         }
         Sql::factory()->setQuery('UPDATE rex_media SET ' . self::COLUMN . ' = NULL WHERE filename = ?', [$file]);
     }
+
+    // ------------------------------------------------------------------ Ausgabe in Templates und Modulen
+
+    /**
+     * <img> mit bearbeiteter Fassung und srcset, optional in einem Format (eigener Ausschnitt bzw. Fokuspunkt).
+     * AVIF/WebP wählt der Media Manager des Cores je nach Browser.
+     *
+     *     echo ImageEditor::img($file, '(min-width: 1200px) 600px, 100vw', '16:9');
+     *     echo ImageEditor::img($file, '100vw', '21:9', ['class' => 'hero', 'priority' => true]);
+     *
+     * $attrs: weitere Attribute; 'alt' überschreibt den Alt-Text des Medienpools (meta_alt, je Sprache), 'priority' => true
+     * für das wichtigste Bild der Seite (loading="eager" fetchpriority="high" statt lazy).
+     *
+     * @param array<string, string|bool> $attrs
+     */
+    public static function img(string $file, string $sizes = '100vw', ?string $ratio = null, array $attrs = []): string
+    {
+        $media = Media::get($file);
+        if (!$media) {
+            return '';
+        }
+        $attrs = self::baseAttrs($media, $attrs);
+        if (null !== self::editable($media)) {
+            return '<img src="' . \Redaxo\Core\View\escape($media->getUrl()) . '"' . self::attrs($attrs) . '>';
+        }
+        $ratio = null !== $ratio && in_array($ratio, self::RATIOS, true) ? $ratio : null;
+        [$w, $h] = self::size($file, $ratio);
+        if (null === $ratio && '' !== ($style = self::imgStyle($file))) {
+            $attrs['style'] = $style;
+        }
+
+        return '<img src="' . \Redaxo\Core\View\escape(self::url($file, 1280, $ratio)) . '" srcset="' . \Redaxo\Core\View\escape(self::srcset($file, $ratio)) . '" sizes="' . \Redaxo\Core\View\escape($sizes) . '"'
+            . ($w && $h ? ' width="' . $w . '" height="' . $h . '"' : '') . self::attrs($attrs) . '>';
+    }
+
+    /**
+     * <picture> mit anderem Format je Bildschirmbreite (Art Direction); jedes Format hat seinen eigenen Ausschnitt.
+     *
+     *     echo ImageEditor::picture($file, '16:9', ['(max-width: 639px)' => '4:5'], '100vw');
+     *
+     * @param array<string, string> $sources Media Query => Format (Reihenfolge = Reihenfolge im Markup)
+     * @param array<string, string|bool> $attrs wie img()
+     */
+    public static function picture(string $file, string $ratio, array $sources, string $sizes = '100vw', array $attrs = []): string
+    {
+        $media = Media::get($file);
+        if (!$media || null !== self::editable($media)) {
+            return self::img($file, $sizes, $ratio, $attrs);
+        }
+        $out = '<picture>';
+        foreach ($sources as $query => $r) {
+            if (in_array($r, self::RATIOS, true)) {
+                [$w, $h] = self::size($file, $r);
+                $out .= '<source media="' . \Redaxo\Core\View\escape($query) . '" srcset="' . \Redaxo\Core\View\escape(self::srcset($file, $r)) . '" sizes="' . \Redaxo\Core\View\escape($sizes) . '"'
+                    . ($w && $h ? ' width="' . $w . '" height="' . $h . '"' : '') . '>';
+            }
+        }
+
+        return $out . self::img($file, $sizes, $ratio, $attrs) . '</picture>';
+    }
+
+    /**
+     * Alt-Text (Medienpool, je Sprache), Laden und Dekodieren. Ohne Alt-Text: alt="" role="presentation" – der Titel ist
+     * kein Alt-Text.
+     *
+     * @param array<string, string|bool> $attrs
+     * @return array<string, string>
+     */
+    private static function baseAttrs(Media $media, array $attrs): array
+    {
+        $priority = !empty($attrs['priority']);
+        unset($attrs['priority']);
+        if (!array_key_exists('alt', $attrs)) {
+            $attrs['alt'] = trim((string) $media->getValue('meta_alt'));
+            if ('' === $attrs['alt']) {
+                $attrs['role'] = 'presentation';
+            }
+        }
+        $attrs += $priority ? ['loading' => 'eager', 'fetchpriority' => 'high'] : ['loading' => 'lazy'];
+        $attrs += ['decoding' => 'async'];
+
+        return array_map('strval', $attrs);
+    }
+
+    /** @param array<string, string> $attrs */
+    private static function attrs(array $attrs): string
+    {
+        $out = '';
+        foreach ($attrs as $k => $v) {
+            if (1 === preg_match('/^[a-zA-Z_:][-a-zA-Z0-9_:.]*$/', $k)) {
+                $out .= ' ' . $k . '="' . \Redaxo\Core\View\escape($v) . '"';
+            }
+        }
+
+        return $out;
+    }
 }

@@ -1,5 +1,7 @@
 # image_editor – Bilder bearbeiten für REDAXO 6
 
+> Für **REDAXO 5** gibt es den Zweig [`5.x`](https://github.com/FriendsOfREDAXO/image_editor/tree/5.x) (gleiche Oberfläche, mit media_negotiator, focuspoint und media_srcset).
+
 Zerstörungsfreie Bildbearbeitung für den Medienpool (aus KLXM Studio, MIT): **Zuschneiden, Drehen, Spiegeln, Ausrichten,
 Entzerren**, dazu **Anpassen** (Effekte, Sättigung, Helligkeit, Kontrast, Schärfe), **Fokuspunkt/Einpassen** und
 **Ausschnitt je Bildformat**: Für 16:9, 4:3, 1:1, 4:5 … legst du je Format selbst fest, welcher Teil des Bildes zu sehen
@@ -39,6 +41,26 @@ Nach Updates (`composer update`) wieder `php bin/console migrate` – das kopier
   wieder um den Fokuspunkt.
 - Ein Punkt am Format zeigt, dass es einen eigenen Ausschnitt hat.
 - Ändert sich das Bild selbst (Zuschneiden, Drehen …), werden die Ausschnitte zurückgesetzt, weil sie nicht mehr passen.
+
+## In Templates und Modulen
+
+```php
+use FriendsOfRedaxo\ImageEditor\ImageEditor;
+
+// Bild im Format 16:9 – eigener Ausschnitt, sonst um den Fokuspunkt; srcset, width/height, Alt-Text aus dem Medienpool
+echo ImageEditor::img('bild.jpg', '(min-width: 1200px) 600px, 100vw', '16:9');
+
+// eigene Attribute; 'alt' überschreibt den Alt-Text, 'priority' für das wichtigste Bild der Seite (LCP)
+echo ImageEditor::img('bild.jpg', '100vw', '21:9', ['class' => 'hero', 'priority' => true]);
+
+// anderes Format je Bildschirmbreite – jedes Format mit eigenem Ausschnitt
+echo ImageEditor::picture('bild.jpg', '16:9', ['(max-width: 639px)' => '4:5'], '100vw');
+```
+
+- AVIF/WebP wählt der Media Manager des Cores je nach Browser.
+- Der Alt-Text kommt aus dem Alt-Feld des Medienpools (je Sprache). Der Titel ist kein Alt-Text; ohne Alt-Text gibt es
+  `alt="" role="presentation"`.
+- Ohne PHP geht auch die Adresse direkt, z. B. `index.php?rex_media_type=image_editor_16x9_960&rex_media_file=bild.jpg`.
 
 ## Für Entwickler
 
