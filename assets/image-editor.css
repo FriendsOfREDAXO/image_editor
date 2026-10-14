@@ -194,3 +194,18 @@
 .cr-foot{display:flex;align-items:center;gap:10px;padding:12px 18px 16px}
 .cr-help{flex:1;margin:0;color:#8E8E93;font-size:12px}
 @media (max-width:640px){.cr-help{display:none}}
+
+/* Medienpool: Vorschau mit Fokuspunkt, Zuschnitte je Format (wie die Mediathek in KLXM Studio) */
+.image-editor-box{display:grid;gap:10px}
+.ie-pv{position:relative;cursor:crosshair;border-radius:8px;overflow:hidden;background:#0E0E0F;line-height:0}
+.ie-pv img{display:block;width:100%;height:auto;user-select:none}
+.ie-pv__dot{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;border:3px solid #fff;background:rgba(20,22,30,.55);box-shadow:0 0 0 2px rgba(20,22,30,.6),0 2px 8px rgba(0,0,0,.4);pointer-events:none}
+.ie-sec{margin:8px 0 0;font-size:14px;font-weight:700}
+.ie-sec small{font-weight:400;color:#6c757d}
+.ie-thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:10px;align-items:end}
+.ie-thumb{display:grid;gap:4px;justify-items:stretch;padding:0;border:0;background:none;cursor:pointer;font:600 12px var(--adm-font);color:inherit;text-align:center}
+.ie-thumb__img{display:block;width:100%;overflow:hidden;border-radius:6px;background:#e9ecef;box-shadow:0 0 0 1px rgba(0,0,0,.12)}
+.ie-thumb__img img{display:block;width:100%;height:100%;object-fit:cover}
+.ie-thumb:hover .ie-thumb__img,.ie-thumb:focus-visible .ie-thumb__img{box-shadow:0 0 0 2px var(--adm-a)}
+.ie-thumb.is-set .ie-thumb__r::after{content:"";display:inline-block;width:6px;height:6px;margin-left:5px;border-radius:50%;background:var(--adm-a);vertical-align:2px}
+.ie-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin:0}

@@ -369,6 +369,8 @@ final class ImageEditor
             'fit' => Adjust::fit(self::stored($file)['fit'] ?? ''),
             'crops' => self::crops($file),
             'ratios' => self::RATIOS,
+            // Vorschau je Format (Medienpool: „Zuschnitte je Format“)
+            'thumbs' => array_combine(self::RATIOS, array_map(static fn (string $r) => self::url($file, 320, $r), self::RATIOS)),
             'presets' => Adjust::PRESETS,
             'editable' => self::editable($media),
             'pool' => false,

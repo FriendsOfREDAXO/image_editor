@@ -136,7 +136,10 @@ export function cropImage(m, { ratio = '', only = '', save }) {
       const err = $('.cr-err', dlg);
       err.hidden = true;
       try {
+        // nur Formate speichern, die sich wirklich geändert haben
+        const same = (a, b) => (!a && !b) || (a && b && ['x', 'y', 'w', 'h'].every((k) => Math.abs(a[k] - b[k]) < 1e-4));
         for (const [r, rc] of Object.entries(pending)) {
+          if (same(rc, m.crops?.[r])) continue;
           m = await save(r, rc);
           result = m;
         }

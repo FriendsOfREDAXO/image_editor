@@ -23,7 +23,12 @@ Nach Updates (`composer update`) wieder `php bin/console migrate` – das kopier
 
 ## Nutzung
 
-- **Medienpool:** in der Seitenleiste eines Bildes „Bearbeiten“, „Anpassen“, „Fokus & Einpassen“ oder „Ausschnitt je Format“.
+- **Medienpool:** In der Seitenleiste eines Bildes (wie die Mediathek in KLXM Studio) gibt es:
+  - eine Vorschau, in die du klickst, um den **Fokuspunkt** zu setzen,
+  - die Werkzeuge Zuschneiden, Drehen, Spiegeln, Ausrichten und Entzerren,
+  - **Zuschnitte je Format** als kleine Vorschauen; ein Klick öffnet den Ausschnitt dieses Formats, ein Punkt
+    zeigt einen eigenen Ausschnitt,
+  - **Anpassen** und **Darstellung im Rahmen**.
 - **fluid:** an jedem Bild auf der Website und in Bildfeldern der Blöcke. Steht ein Bild in einem festen Format,
   erscheint zusätzlich **„Ausschnitt“**: Der Dialog öffnet mit diesem Format, die anderen Formate lassen sich daneben
   wählen.

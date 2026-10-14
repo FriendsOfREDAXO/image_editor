@@ -61,31 +61,64 @@ async function crop({ file, api, ratio = '' }) {
   });
 }
 
+const FIT_LABEL = { cover: 'Füllen (zuschneiden) – wie im Kit', contain: 'Einpassen (ganzes Bild im Rahmen)', original: 'Originalformat (Rahmen passt sich an)' };
+
+/**
+ * Medienpool (Seitenleiste eines Bildes), wie die Mediathek in KLXM Studio: Vorschau mit Fokuspunkt (ins Bild klicken),
+ * Werkzeuge, „Zuschnitte je Format“ (Klick öffnet den Ausschnitt dieses Formats), Anpassen und Darstellung im Rahmen.
+ */
 function init(scope = document) {
-  scope.querySelectorAll('[data-image-editor]').forEach((box) => {
+  scope.querySelectorAll('[data-image-editor]').forEach(async (box) => {
     if (box.dataset.ieReady) return;
     box.dataset.ieReady = '1';
     const cfg = JSON.parse(box.dataset.imageEditor);
-    const bar = box.querySelector('[data-image-editor-tools]');
-    bar.innerHTML = EDIT_TOOLS.map((k) => `<button type="button" class="ie-bar__btn" data-ie-tool="${k}"><span>${esc(LABELS[k])}</span></button>`).join('')
-      + '<button type="button" class="ie-bar__btn" data-ie-adjust="adjust"><span>Anpassen</span></button>'
-      + '<button type="button" class="ie-bar__btn" data-ie-adjust="focus"><span>Fokus &amp; Einpassen</span></button>'
-      + '<button type="button" class="ie-bar__btn" data-ie-crop><span>Ausschnitt je Format</span></button>';
-    bar.addEventListener('click', async (e) => {
-      const b = e.target.closest('[data-ie-tool],[data-ie-adjust],[data-ie-crop]');
-      if (!b) return;
+    const state = box.querySelector('[data-image-editor-state]');
+    const fail = (err) => { if (state) { state.textContent = err.message; state.classList.add('text-danger'); } };
+    let m;
+    try { m = await call(cfg.api, { file: cfg.file, action: 'info' }); } catch (err) { fail(err); return; }
+
+    const render = () => {
+      const f = m.focus || { x: 50, y: 50 };
+      box.innerHTML = `
+        <div class="ie-pv" data-ie-focus title="Ins Bild klicken: Fokuspunkt setzen">
+          <img src="${esc(m.url)}" alt="" draggable="false"><span class="ie-pv__dot" style="left:${f.x}%;top:${f.y}%"></span>
+        </div>
+        <div class="ie-bar" role="toolbar" aria-label="Bild bearbeiten">${EDIT_TOOLS.map((k) => `<button type="button" class="ie-bar__btn" data-ie-tool="${k}"><span>${esc(LABELS[k])}</span></button>`).join('')}</div>
+        <p class="help-block">Fokuspunkt: ins Bild klicken (z. B. aufs Gesicht). Dieser Bereich bleibt in jedem Format sichtbar.</p>
+        <h4 class="ie-sec">Zuschnitte je Format <small>– klicken zum Zoomen und Zuschneiden</small></h4>
+        <div class="ie-thumbs">${(m.ratios || []).map((r) => `<button type="button" class="ie-thumb${m.crops?.[r] ? ' is-set' : ''}" data-ie-ratio="${r}" title="${m.crops?.[r] ? 'Eigener Ausschnitt' : 'Automatisch (Fokuspunkt)'}">
+          <span class="ie-thumb__img" style="aspect-ratio:${r.replace(':', '/')}"><img src="${esc(m.thumbs?.[r] || '')}" alt="" loading="lazy"></span><span class="ie-thumb__r">${r}</span></button>`).join('')}</div>
+        <h4 class="ie-sec">Anpassen <small>– Effekte, Sättigung, Helligkeit, Kontrast, Schärfe</small></h4>
+        <p class="ie-row"><span>${esc(m.fx_label || 'Original (ohne Anpassung)')}</span><button type="button" class="btn btn-default btn-xs" data-ie-adjust="adjust">Anpassen …</button></p>
+        <h4 class="ie-sec">Darstellung im Rahmen <small>– füllen, einpassen oder Originalformat</small></h4>
+        <p class="ie-row"><span>${esc(FIT_LABEL[m.fit] || FIT_LABEL.cover)}</span><button type="button" class="btn btn-default btn-xs" data-ie-adjust="focus">Rahmen …</button></p>
+        <p class="help-block" data-image-editor-state>${m.edit || m.fx ? '<strong>Bearbeitet</strong> – das Original bleibt erhalten.' : 'Das Original bleibt immer erhalten.'}</p>`;
+    };
+    render();
+
+    box.addEventListener('click', async (e) => {
+      const pv = e.target.closest('[data-ie-focus]');
+      const b = e.target.closest('[data-ie-tool],[data-ie-adjust],[data-ie-ratio]');
       try {
+        if (pv) {
+          // Fokuspunkt: Klick ins Bild, Anpassung und Rahmen bleiben
+          const r = pv.querySelector('img').getBoundingClientRect();
+          const focus = { x: Math.round(Math.min(100, Math.max(0, (e.clientX - r.left) / r.width * 100)) * 10) / 10, y: Math.round(Math.min(100, Math.max(0, (e.clientY - r.top) / r.height * 100)) * 10) / 10 };
+          pv.querySelector('.ie-pv__dot').style.cssText = `left:${focus.x}%;top:${focus.y}%`;
+          m = await call(cfg.api, { file: cfg.file, action: 'adjust', fx: m.fx || '', focus: JSON.stringify(focus), fit: m.fit || 'cover' });
+          render();
+          return;
+        }
+        if (!b) return;
         const item = b.dataset.ieAdjust
           ? await adjust({ file: cfg.file, api: cfg.api, tab: b.dataset.ieAdjust })
-          : ('ieCrop' in b.dataset ? await crop({ file: cfg.file, api: cfg.api }) : await open({ file: cfg.file, api: cfg.api, tool: b.dataset.ieTool }));
+          : b.dataset.ieRatio ? await crop({ file: cfg.file, api: cfg.api, ratio: b.dataset.ieRatio })
+          : await open({ file: cfg.file, api: cfg.api, tool: b.dataset.ieTool });
         if (!item) return;
-        const img = box.querySelector('.image-editor-preview img');
-        if (img) img.src = item.url;
-        const st = box.querySelector('[data-image-editor-state]');
-        if (st) st.innerHTML = (item.edit || item.fx) ? '<strong>Bearbeitet</strong>' + (item.fx_label ? ' · ' + esc(item.fx_label) : '') + ' – das Original bleibt erhalten.' : 'Original – keine Bearbeitung.';
+        m = item.ratios ? item : await call(cfg.api, { file: cfg.file, action: 'info' });
+        render();
       } catch (err) {
-        const st = box.querySelector('[data-image-editor-state]');
-        if (st) { st.textContent = err.message; st.classList.add('text-danger'); }
+        fail(err);
       }
     });
   });

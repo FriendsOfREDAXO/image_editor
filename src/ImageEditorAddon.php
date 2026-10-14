@@ -89,10 +89,9 @@ final class ImageEditorAddon extends Addon
         if ($why) {
             return $h . '<p class="help-block">' . escape($why) . '</p></div></section>';
         }
-        $h .= '<div data-image-editor="' . escape($config) . '">'
+        $h .= '<div class="image-editor-box" data-image-editor="' . escape($config) . '">'
             . '<p class="image-editor-preview"><img src="' . escape($info['url']) . '" alt="" loading="lazy"></p>'
-            . '<div class="ie-bar" role="toolbar" aria-label="Bild bearbeiten" data-image-editor-tools></div>'
-            . '<p class="help-block" data-image-editor-state>' . ($info['edit'] ? '<strong>Bearbeitet</strong> – das Original bleibt erhalten.' : 'Zuschneiden, Drehen, Spiegeln, Ausrichten, Entzerren – das Original bleibt erhalten.') . '</p>'
+            . '<p class="help-block" data-image-editor-state>Wird geladen …</p>'
             . '</div>';
 
         return $h . '</div></section>';
