@@ -114,11 +114,13 @@ final class ImageEditor
     {
         [$w] = self::size($file, $ratio);
         $out = [];
+        // Stufen bis zur Quellbreite; die nächstgrößere Stufe liefert die Quelle selbst (nie vergrößert) und steht mit der
+        // tatsächlichen Breite im srcset – so ist auch die volle Auflösung erreichbar und jeder Descriptor stimmt
         foreach (self::WIDTHS as $width) {
-            if ($w > 0 && $width > $w * 1.15 && $out) {
+            $out[] = self::url($file, $width, $ratio) . ' ' . min($width, $w ?: $width) . 'w';
+            if ($w > 0 && $width >= $w) {
                 break;
             }
-            $out[] = self::url($file, $width, $ratio) . ' ' . min($width, $w ?: $width) . 'w';
         }
 
         return implode(', ', $out);
