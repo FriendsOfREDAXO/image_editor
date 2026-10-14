@@ -4,7 +4,7 @@ use FriendsOfRedaxo\ImageEditor\ImageEditor;
 
 /**
  * Laden und Speichern für die Dialoge: `?rex-api-call=image_editor&_csrf_token=…`
- * (POST: file, action=info|save|adjust|crop). Auch im Frontend aufrufbar (published) – nur mit Backend-Sitzung und
+ * (POST: file, action=info|crop, ratio, rect). Auch im Frontend aufrufbar (published) – nur mit Backend-Sitzung und
  * Recht auf die Kategorie des Mediums.
  */
 class rex_api_image_editor extends rex_api_function
@@ -28,8 +28,6 @@ class rex_api_image_editor extends rex_api_function
                 throw new RuntimeException('Keine Berechtigung für dieses Bild.', 403);
             }
             $data = match (rex_post('action', 'string', 'info')) {
-                'save' => ImageEditor::save($file, json_decode(rex_post('ops', 'string', ''), true) ?? []),
-                'adjust' => ImageEditor::saveAdjust($file, rex_post('fx', 'string', ''), json_decode(rex_post('focus', 'string', ''), true), rex_post('fit', 'string', 'cover')),
                 'crop' => ImageEditor::saveCrop($file, rex_post('ratio', 'string', ''), json_decode(rex_post('rect', 'string', 'null'), true)),
                 default => ImageEditor::info($file),
             };

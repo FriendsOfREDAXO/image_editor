@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.0-beta3 – 2026-10-14
+
+Schlank: Was MediaPlace und focuspoint schon können, ist raus.
+- Entfernt:
+  - Bildbearbeitung (Zuschneiden, Drehen, Spiegeln, Ausrichten, Entzerren) und „Anpassen“ → MediaPlace,
+  - der eigene Fokuspunkt → focuspoint (`med_focuspoint`),
+  - „Rahmen“,
+  - die Typen `image_editor_base` und `image_editor_edit` (werden beim Update gelöscht).
+- Neu: Feldtyp „Zuschnitte je Format“ für die Detailansicht von MediaPlace (wird bei installiertem MediaPlace einmalig
+  angelegt).
+- Ändert sich das Original (andere Maße), werden die Ausschnitte zurückgesetzt.
+- Skript 8 KB statt 42 KB.
+
 ## 1.0.0-beta2 – 2026-10-14
 
 Ideen aus media_srcset übernommen:

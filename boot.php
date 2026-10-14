@@ -1,46 +1,53 @@
 <?php
 
 /**
- * image_editor für REDAXO 5 – Bilder zerstörungsfrei bearbeiten (aus KLXM Studio, MIT).
+ * image_editor für REDAXO 5: Zuschnitte je Bildformat (aus KLXM Studio, MIT).
+ * Bearbeiten macht MediaPlace, den Fokuspunkt focuspoint – dieses AddOn ergänzt die Ausschnitte je Format.
  *
  * @var rex_addon $this
  */
 
 use FriendsOfRedaxo\ImageEditor\ImageEditor;
 
-// Effekt für eigene Media-Manager-Typen (an erster Stelle: nutzt die bearbeitete Fassung, Format, Breite, Anpassung)
 rex_media_manager::addEffect(rex_effect_image_editor::class);
 
 // Breiten „typ__breite“ (z. B. image_editor_16x9__640): Effekte des Grundtyps mit dieser Breite. LATE, weil
 // media_srcset jede „typ__breite“-Anfrage auf die Effekte des Grundtyps setzt – für image_editor_* entscheidet dieses AddOn.
 rex_extension::register('MEDIA_MANAGER_FILTERSET', static function (rex_extension_point $ep) {
-    return ImageEditor::filterset((string) $ep->getParam('rex_media_type'), rex_media_manager::getMediaFile()) ?? $ep->getSubject();
+    return ImageEditor::filterset((string) $ep->getParam('rex_media_type')) ?? $ep->getSubject();
 }, rex_extension::LATE);
 
-// media_negotiator nachträglich installiert oder entfernt: Typen angleichen (AVIF/WebP je nach Browser bzw. WebP)
-if (rex::isBackend() && rex::getUser() && $this->getConfig('negotiator') !== rex_addon::get('media_negotiator')->isAvailable()) {
-    ImageEditor::syncTypes();
-}
-
-// Original ersetzt (andere Maße) oder gelöscht: Bearbeitung passt nicht mehr
-rex_extension::register('MEDIA_UPDATED', static function (rex_extension_point $ep): void {
-    $file = (string) $ep->getParam('filename');
-    $orig = ImageEditor::stored($file)['orig'] ?? null;
-    $media = rex_media::get($file);
-    if ($orig && $media && !in_array([(int) $media->getWidth(), (int) $media->getHeight()], [[$orig['w'], $orig['h']], [$orig['h'], $orig['w']]], true)) {
-        ImageEditor::forget($file);
-    }
-});
+// Original geändert (z. B. in MediaPlace zugeschnitten, andere Maße) oder gelöscht: Ausschnitte passen nicht mehr
+rex_extension::register('MEDIA_UPDATED', static fn (rex_extension_point $ep) => ImageEditor::check((string) $ep->getParam('filename')));
 rex_extension::register('MEDIA_DELETED', static fn (rex_extension_point $ep) => ImageEditor::forget((string) $ep->getParam('filename')));
 
-// Medienpool: Werkzeuge in der Seitenleiste eines Bildes
-if (rex::isBackend() && rex::getUser() && 'mediapool' === rex_be_controller::getCurrentPagePart(1)) {
+// MediaPlace: Feldtyp „Zuschnitte je Format“ für die Detailansicht (unter MediaPlace → Metainfo Felder anlegen)
+rex_extension::register('MEDIAPLACE_WIDGET_TYPES', static function (rex_extension_point $ep): array {
+    $types = $ep->getSubject();
+    $types['image_editor_crops'] = [
+        'label' => 'Zuschnitte je Format (image_editor)',
+        'class' => FriendsOfRedaxo\ImageEditor\MediaplaceWidget::class,
+        'fragment' => 'image_editor/mediaplace_crops.php',
+    ];
+
+    return $types;
+});
+
+if (rex::isBackend() && rex::getUser()) {
+    // media_negotiator nachträglich installiert oder entfernt: Typen angleichen (AVIF/WebP je nach Browser bzw. WebP)
+    if ($this->getConfig('negotiator') !== rex_addon::get('media_negotiator')->isAvailable()) {
+        ImageEditor::syncTypes();
+    }
+    // MediaPlace: Feld „Zuschnitte je Format“ einmalig anlegen
+    ImageEditor::ensureMediaplaceField();
+    // Skript überall im Backend: MediaPlace öffnet seine Detailansicht auf jeder Seite
     rex_view::addCssFile($this->getAssetsUrl('image-editor.css'));
     rex_view::addJsFile($this->getAssetsUrl('image-editor.js'));
-    rex_extension::register('MEDIA_DETAIL_SIDEBAR', static function (rex_extension_point $ep): string {
-        // Bearbeitbare Bilder: unsere Vorschau (mit Fokuspunkt) ersetzt die des Medienpools – keine doppelte Vorschau
-        $panel = ImageEditor::sidebar((string) $ep->getParam('filename'));
 
-        return str_contains($panel, 'data-image-editor=') ? $panel : (string) $ep->getSubject() . $panel;
+    // Klassischer Medienpool: Box unter der Vorschau des Medienpools
+    rex_extension::register('MEDIA_DETAIL_SIDEBAR', static function (rex_extension_point $ep): string {
+        $box = ImageEditor::box((string) $ep->getParam('filename'));
+
+        return (string) $ep->getSubject() . ('' !== $box ? '<section class="panel panel-default image-editor-panel"><header class="panel-heading"><div class="panel-title"><i class="rex-icon fa-crop"></i> Zuschnitte je Format</div></header><div class="panel-body">' . $box . '</div></section>' : '');
     });
 }

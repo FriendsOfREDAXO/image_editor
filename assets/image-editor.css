@@ -210,3 +210,6 @@
 .ie-thumb.is-set .ie-thumb__r::after{content:"";display:inline-block;width:6px;height:6px;margin-left:5px;border-radius:50%;background:var(--adm-a);vertical-align:2px}
 .ie-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin:0}
 .ie-orig{margin:-4px 0 0;font-size:12px;color:#6c757d}
+.ie-hint{margin:8px 0 0;font-size:12px}
+/* MediaPlace-Detailansicht: Kacheln etwas kleiner */
+#mp-overlay .ie-thumbs{grid-template-columns:repeat(auto-fill,minmax(64px,1fr))}
