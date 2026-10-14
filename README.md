@@ -1,7 +1,9 @@
 # image_editor – Bilder bearbeiten für REDAXO 5
 
-Zerstörungsfreie Bildbearbeitung für den Medienpool (aus KLXM Studio, MIT). Dasselbe AddOn gibt es für REDAXO 6:
-[FriendsOfREDAXO/image_editor](https://github.com/FriendsOfREDAXO/image_editor).
+Zerstörungsfreie Bildbearbeitung für den Medienpool (aus KLXM Studio, MIT).
+
+> **Zweig `5.x` = REDAXO 5.** Die Version für REDAXO 6 liegt im Zweig
+> [`main`](https://github.com/FriendsOfREDAXO/image_editor). Oberfläche und Funktionen sind gleich.
 
 - **Zuschneiden, Drehen, Spiegeln, Ausrichten, Entzerren.** Das Original bleibt unverändert; gespeichert werden nur die
   Schritte.
@@ -12,6 +14,12 @@ Zerstörungsfreie Bildbearbeitung für den Medienpool (aus KLXM Studio, MIT). Da
 - **Darstellung im Rahmen:** füllen, einpassen oder Originalformat.
 - **[media_negotiator](https://github.com/FriendsOfREDAXO/media_negotiator):** Ist es installiert, bekommt jeder
   Browser AVIF oder WebP (sonst immer WebP). Der Cache wird je Format getrennt.
+
+## Installation
+
+Den Inhalt dieses Zweigs als Ordner `redaxo/src/addons/image_editor` ablegen (ZIP:
+[5.x herunterladen](https://github.com/FriendsOfREDAXO/image_editor/archive/refs/heads/5.x.zip)) und im Backend unter
+AddOns installieren. Optional vorher [media_negotiator](https://github.com/FriendsOfREDAXO/media_negotiator) installieren.
 
 ## Voraussetzungen
 
