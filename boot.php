@@ -11,15 +11,11 @@ use FriendsOfRedaxo\ImageEditor\ImageEditor;
 // Effekt für eigene Media-Manager-Typen (an erster Stelle: nutzt die bearbeitete Fassung, Format, Breite, Anpassung)
 rex_media_manager::addEffect(rex_effect_image_editor::class);
 
-// Breiten „typ__breite“ (z. B. image_editor_16x9__640): Effekte des Grundtyps mit dieser Breite
+// Breiten „typ__breite“ (z. B. image_editor_16x9__640): Effekte des Grundtyps mit dieser Breite. LATE, weil
+// media_srcset jede „typ__breite“-Anfrage auf die Effekte des Grundtyps setzt – für image_editor_* entscheidet dieses AddOn.
 rex_extension::register('MEDIA_MANAGER_FILTERSET', static function (rex_extension_point $ep) {
-    $set = $ep->getSubject();
-    if (is_array($set) && [] !== $set) {
-        return $set;
-    }
-
-    return ImageEditor::filterset((string) $ep->getParam('rex_media_type'), rex_media_manager::getMediaFile()) ?? $set;
-});
+    return ImageEditor::filterset((string) $ep->getParam('rex_media_type'), rex_media_manager::getMediaFile()) ?? $ep->getSubject();
+}, rex_extension::LATE);
 
 // media_negotiator nachträglich installiert oder entfernt: Typen angleichen (AVIF/WebP je nach Browser bzw. WebP)
 if (rex::isBackend() && rex::getUser() && $this->getConfig('negotiator') !== rex_addon::get('media_negotiator')->isAvailable()) {

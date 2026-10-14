@@ -127,11 +127,13 @@ final class ImageEditor
     {
         [$w] = self::size($file, $ratio);
         $out = [];
+        // Stufen bis zur Quellbreite; die nächstgrößere Stufe liefert die Quelle selbst (nie vergrößert) und steht mit der
+        // tatsächlichen Breite im srcset – so ist auch die volle Auflösung erreichbar und jeder Descriptor stimmt
         foreach (self::WIDTHS as $width) {
-            if ($w > 0 && $width > $w * 1.15 && $out) {
+            $out[] = self::url($file, $width, $ratio) . ' ' . min($width, $w ?: $width) . 'w';
+            if ($w > 0 && $width >= $w) {
                 break;
             }
-            $out[] = self::url($file, $width, $ratio) . ' ' . min($width, $w ?: $width) . 'w';
         }
 
         return implode(', ', $out);
@@ -195,7 +197,7 @@ final class ImageEditor
             $h = $H;
             $w = (int) round($H * $ar);
         }
-        $f = Adjust::focus(self::stored($file)['focus'] ?? null) ?? ['x' => 50, 'y' => 50];
+        $f = self::focus($file);
         $x = (int) round(min(max(0, $f['x'] / 100 * $W - $w / 2), $W - $w));
         $y = (int) round(min(max(0, $f['y'] / 100 * $H - $h / 2), $H - $h));
 
@@ -315,6 +317,13 @@ final class ImageEditor
             $data['fit'] = $m;
         }
         self::store($file, $data);
+        // AddOn focuspoint (med_focuspoint): denselben Fokus mitschreiben – dann folgen auch focuspoint-Typen und
+        // media_srcset-Sets dem Fokus aus dem Bildeditor
+        if (self::hasMediaColumn('med_focuspoint')) {
+            $f = $data['focus'] ?? ['x' => 50, 'y' => 50];
+            rex_sql::factory()->setQuery('UPDATE ' . rex::getTable('media') . ' SET med_focuspoint = ? WHERE filename = ?', [sprintf('%.1F,%.1F', $f['x'], $f['y']), $file]);
+            rex_media::clearInstance($file);
+        }
 
         return self::info($file);
     }
@@ -378,7 +387,7 @@ final class ImageEditor
             'edit' => [] !== $ops ? $ops : null,
             'fx' => self::fx($file),
             'fx_label' => Adjust::label(self::fx($file)),
-            'focus' => Adjust::focus(self::stored($file)['focus'] ?? null) ?? ['x' => 50, 'y' => 50],
+            'focus' => self::focus($file),
             'fit' => Adjust::fit(self::stored($file)['fit'] ?? ''),
             'crops' => self::crops($file),
             'ratios' => self::RATIOS,
@@ -407,6 +416,8 @@ final class ImageEditor
         $types = [
             'image_editor' => ['', 0, 'yes', 'Bildeditor: bearbeitete Fassung, volle Größe'],
             'image_editor_base' => ['', 1600, 'no', 'Bildeditor: Vorschau ohne Anpassung (Dialog)'],
+            // nur die bearbeitete Fassung, ohne Formatumwandlung – als Vorverarbeitung für andere Typen (media_srcset: chain)
+            'image_editor_edit' => ['', 0, 'yes', 'Bildeditor: nur bearbeitete Fassung (Vorverarbeitung, z. B. media_srcset „chain“)'],
         ];
         foreach (self::RATIOS as $r) {
             $types['image_editor_' . str_replace(':', 'x', $r)] = [$r, 0, 'yes', 'Bildeditor: Format ' . $r . ' (eigener Ausschnitt oder Fokuspunkt)'];
@@ -434,7 +445,9 @@ final class ImageEditor
             }
             rex_sql::factory()->setQuery('DELETE FROM ' . rex::getTable('media_manager_type_effect') . ' WHERE type_id = ?', [$id]);
             $effects = [['image_editor', ['ratio' => $ratio, 'width' => (string) $width, 'adjust' => $adjust]]];
-            $effects[] = $negotiator ? ['negotiator', []] : ['image_format', ['convert_to' => 'webp']];
+            if ('image_editor_edit' !== $name) {
+                $effects[] = $negotiator ? ['negotiator', []] : ['image_format', ['convert_to' => 'webp']];
+            }
             foreach ($effects as $prio => [$effect, $params]) {
                 $p = [];
                 foreach ($params as $k => $v) {
@@ -459,8 +472,16 @@ final class ImageEditor
      */
     public static function filterset(string $type, string $file): ?array
     {
-        if (1 !== preg_match('/^(image_editor(?:_\d+x\d+|_base)?)__(\d+)$/', $type, $m) || !in_array((int) $m[2], self::WIDTHS, true)) {
+        if (1 !== preg_match('/^(image_editor(?:_\d+x\d+|_base)?)__(\d+)$/', $type, $m)) {
             return null;
+        }
+        // Breiten ohne eigene Stufe auf die nächstgrößere runden (wie media_srcset) – begrenzt die Zahl der Cache-Dateien
+        $width = self::WIDTHS[count(self::WIDTHS) - 1];
+        foreach (self::WIDTHS as $w) {
+            if ($w >= (int) $m[2]) {
+                $width = $w;
+                break;
+            }
         }
         $rows = rex_sql::factory()->getArray(
             'SELECT e.effect, e.parameters FROM ' . rex::getTable('media_manager_type') . ' t JOIN ' . rex::getTable('media_manager_type_effect') . ' e ON e.type_id = t.id WHERE t.name = ? ORDER BY e.priority',
@@ -478,7 +499,7 @@ final class ImageEditor
                 $params[str_replace('rex_effect_' . $effect . '_', '', (string) $k)] = $v;
             }
             if ('image_editor' === $effect) {
-                $params['width'] = (int) $m[2];
+                $params['width'] = $width;
             }
             $set[] = ['effect' => $effect, 'params' => $params];
         }
@@ -524,30 +545,121 @@ final class ImageEditor
             . '<p class="help-block" data-image-editor-state>Wird geladen …</p></div></div></section>';
     }
 
+    /** Fokuspunkt in Prozent: aus dem Bildeditor, sonst aus dem AddOn focuspoint (med_focuspoint), sonst Mitte */
+    public static function focus(string $file): array
+    {
+        if ($f = Adjust::focus(self::stored($file)['focus'] ?? null)) {
+            return $f;
+        }
+        if (self::hasMediaColumn('med_focuspoint') && ($media = rex_media::get($file))) {
+            $v = array_map('floatval', explode(',', (string) $media->getValue('med_focuspoint')));
+            if (2 === count($v) && ($f = Adjust::focus(['x' => $v[0], 'y' => $v[1]]))) {
+                return $f;
+            }
+        }
+
+        return ['x' => 50.0, 'y' => 50.0];
+    }
+
+    /** @var array<string, bool> */
+    private static array $columns = [];
+
+    private static function hasMediaColumn(string $name): bool
+    {
+        return self::$columns[$name] ??= \rex_sql_table::get(rex::getTable('media'))->hasColumn($name);
+    }
+
+    /**
+     * Alt-Text wie media_srcset (dessen Regel, falls installiert): MediaPlace > med_alt > leer. Der Titel ist kein Alt-Text.
+     *
+     * @return array{alt: string, decorative: bool}
+     */
+    public static function alt(rex_media $media): array
+    {
+        if (class_exists('FriendsOfRedaxo\\MediaSrcset\\Media\\AltText')) {
+            $r = \FriendsOfRedaxo\MediaSrcset\Media\AltText::resolve($media, \rex_clang::getCurrentId());
+
+            return ['alt' => (string) ($r['alt'] ?? ''), 'decorative' => (bool) ($r['decorative'] ?? false)];
+        }
+        if (self::hasMediaColumn('med_alt_decorative') && (bool) $media->getValue('med_alt_decorative')) {
+            return ['alt' => '', 'decorative' => true];
+        }
+
+        return ['alt' => self::hasMediaColumn('med_alt') ? trim((string) $media->getValue('med_alt')) : '', 'decorative' => false];
+    }
+
     /**
      * <img> für Module und Templates: bearbeitete Fassung, srcset, optional in einem Format (eigener Ausschnitt bzw.
      * Fokuspunkt). Beispiel: echo ImageEditor::img('REX_MEDIA[1]', '(min-width: 1200px) 600px, 100vw', '16:9');
      *
-     * @param array<string, string> $attrs weitere Attribute (class, loading …)
+     * $attrs: weitere Attribute; 'alt' überschreibt den Alt-Text, 'priority' => true für das wichtigste Bild der Seite
+     * (loading="eager" fetchpriority="high" statt lazy).
+     *
+     * @param array<string, string|bool> $attrs
      */
-    public static function img(string $file, string $sizes = '100vw', ?string $ratio = null, ?string $alt = null, array $attrs = []): string
+    public static function img(string $file, string $sizes = '100vw', ?string $ratio = null, array $attrs = []): string
     {
         $media = rex_media::get($file);
         if (!$media) {
             return '';
         }
-        $alt ??= (string) ($media->getValue('med_alt') ?: $media->getTitle());
+        $attrs = self::baseAttrs($media, $attrs);
         if (null !== self::editable($media)) {
-            return '<img src="' . \rex_escape($media->getUrl()) . '" alt="' . \rex_escape($alt) . '"' . \rex_string::buildAttributes($attrs) . '>';
+            return '<img src="' . \rex_escape($media->getUrl()) . '"' . \rex_string::buildAttributes($attrs) . '>';
         }
         $ratio = null !== $ratio && in_array($ratio, self::RATIOS, true) ? $ratio : null;
         [$w, $h] = self::size($file, $ratio);
-        $attrs += ['loading' => 'lazy', 'decoding' => 'async'];
         if (null === $ratio && '' !== ($style = self::imgStyle($file))) {
             $attrs['style'] = $style;
         }
 
         return '<img src="' . \rex_escape(self::url($file, 1280, $ratio)) . '" srcset="' . \rex_escape(self::srcset($file, $ratio)) . '" sizes="' . \rex_escape($sizes) . '"'
-            . ($w && $h ? ' width="' . $w . '" height="' . $h . '"' : '') . ' alt="' . \rex_escape($alt) . '"' . \rex_string::buildAttributes($attrs) . '>';
+            . ($w && $h ? ' width="' . $w . '" height="' . $h . '"' : '') . \rex_string::buildAttributes($attrs) . '>';
+    }
+
+    /**
+     * <picture> mit anderem Format je Bildschirmbreite (Art Direction). Jedes Format hat seinen eigenen Ausschnitt.
+     * Beispiel: echo ImageEditor::picture('REX_MEDIA[1]', '16:9', ['(max-width: 639px)' => '4:5'], '100vw');
+     *
+     * @param array<string, string> $sources Media Query => Format (Reihenfolge = Reihenfolge im Markup)
+     * @param array<string, string|bool> $attrs wie img()
+     */
+    public static function picture(string $file, string $ratio, array $sources, string $sizes = '100vw', array $attrs = []): string
+    {
+        $media = rex_media::get($file);
+        if (!$media || null !== self::editable($media)) {
+            return self::img($file, $sizes, $ratio, $attrs);
+        }
+        $out = '<picture>';
+        foreach ($sources as $query => $r) {
+            if (in_array($r, self::RATIOS, true)) {
+                [$w, $h] = self::size($file, $r);
+                $out .= '<source media="' . \rex_escape($query) . '" srcset="' . \rex_escape(self::srcset($file, $r)) . '" sizes="' . \rex_escape($sizes) . '"'
+                    . ($w && $h ? ' width="' . $w . '" height="' . $h . '"' : '') . '>';
+            }
+        }
+
+        return $out . self::img($file, $sizes, $ratio, $attrs) . '</picture>';
+    }
+
+    /**
+     * @param array<string, string|bool> $attrs
+     * @return array<string, string>
+     */
+    private static function baseAttrs(rex_media $media, array $attrs): array
+    {
+        $priority = !empty($attrs['priority']);
+        unset($attrs['priority']);
+        if (!array_key_exists('alt', $attrs)) {
+            $a = self::alt($media);
+            $attrs['alt'] = $a['alt'];
+            if ('' === $a['alt']) {
+                $attrs['role'] = 'presentation';
+            }
+        }
+        $attrs += $priority ? ['loading' => 'eager', 'fetchpriority' => 'high'] : ['loading' => 'lazy'];
+        $attrs += ['decoding' => 'async'];
+
+        return array_map('strval', $attrs);
     }
 }

@@ -43,13 +43,31 @@ Medienpool → Bild öffnen → rechts **„Bild bearbeiten“**:
 ```php
 use FriendsOfRedaxo\ImageEditor\ImageEditor;
 
-// <img> mit srcset, bearbeitete Fassung, im Format 16:9 (eigener Ausschnitt bzw. Fokuspunkt)
+// Bild im Format 16:9 – eigener Ausschnitt der Redaktion, sonst um den Fokuspunkt; srcset mit allen Breiten
 echo ImageEditor::img('REX_MEDIA[1]', '(min-width: 1200px) 600px, 100vw', '16:9');
+
+// ohne Format (bearbeitete Fassung im eigenen Seitenverhältnis)
+echo ImageEditor::img('REX_MEDIA[1]', '100vw');
+
+// eigene Attribute; 'alt' überschreibt den Alt-Text, 'priority' für das wichtigste Bild der Seite (LCP)
+echo ImageEditor::img('REX_MEDIA[1]', '100vw', '21:9', ['class' => 'hero', 'alt' => 'Unser Team', 'priority' => true]);
+
+// anderes Format je Bildschirmbreite (Art Direction) – jedes Format mit eigenem Ausschnitt
+echo ImageEditor::picture('REX_MEDIA[1]', '16:9', ['(max-width: 639px)' => '4:5'], '100vw');
 
 // nur Adressen
 ImageEditor::url('bild.jpg', 960, '4:3');   // eine Breite
 ImageEditor::srcset('bild.jpg', '4:3');     // alle Breiten
 ```
+
+Was `img()` und `picture()` setzen:
+- `width` und `height` (der Browser reserviert den Platz),
+- `loading="lazy" decoding="async"`, mit `priority` stattdessen `loading="eager" fetchpriority="high"`,
+- den **Alt-Text** nach derselben Regel wie media_srcset: übergeben > MediaPlace > `med_alt` > leer. Der Titel ist kein
+  Alt-Text; ohne Alt-Text gibt es `alt="" role="presentation"`.
+- Das `srcset` reicht bis zur tatsächlichen Breite der Quelle, jeder Descriptor stimmt mit der Datei überein.
+
+Formate: `16:9`, `16:10`, `21:9`, `3:2`, `4:3`, `1:1`, `4:5`, `3:4`.
 
 ## Media Manager
 
@@ -58,8 +76,10 @@ ImageEditor::srcset('bild.jpg', '4:3');     // alle Breiten
 | `image_editor` | bearbeitete Fassung, volle Größe |
 | `image_editor_16x9`, `_16x10`, `_21x9`, `_3x2`, `_4x3`, `_1x1`, `_4x5`, `_3x4` | im Format |
 | `image_editor_base` | Vorschau ohne Anpassung (für den Dialog) |
+| `image_editor_edit` | nur die bearbeitete Fassung, ohne Formatumwandlung – als Vorverarbeitung für andere Typen |
 
 - Breiten werden als `typ__breite` angefragt, z. B. `image_editor_16x9__640` (320, 640, 960, 1280, 1920, 2560).
+  Andere Breiten werden auf die nächste Stufe aufgerundet (`__700` liefert 960). Vergrößert wird nie.
   Diese Schreibweise kennen auch media_negotiator und media_srcset.
 - Jeder Typ hat zwei Effekte:
   - **„Bildeditor“**: bearbeitete Fassung, Format, Breite, Anpassung,
@@ -67,6 +87,14 @@ ImageEditor::srcset('bild.jpg', '4:3');     // alle Breiten
 - Wird media_negotiator nachträglich installiert oder entfernt, gleicht das AddOn seine Typen beim nächsten Aufruf des
   Backends an.
 - Den Effekt „Bildeditor“ kannst du auch in eigenen Typen verwenden. Er gehört an die erste Stelle.
+
+## Zusammenspiel mit anderen AddOns
+
+| AddOn | Zusammenspiel |
+|---|---|
+| [media_negotiator](https://github.com/FriendsOfREDAXO/media_negotiator) | AVIF/WebP je Browser, Cache je Format getrennt (sonst WebP) |
+| [focuspoint](https://github.com/FriendsOfREDAXO/focuspoint) | Der Fokuspunkt aus dem Bildeditor wird in `med_focuspoint` mitgeschrieben, dann folgen auch focuspoint-Typen ihm. Ein vorhandener focuspoint-Wert gilt, solange im Bildeditor keiner gesetzt ist. |
+| [media_srcset](https://github.com/FriendsOfREDAXO/media_srcset) | Die Sets folgen dem Fokuspunkt (über focuspoint). Mit `'chain' => 'image_editor_edit'` bekommt ein Set auch Zuschnitt, Drehung und Anpassung aus dem Bildeditor; eigene Ausschnitte je Format gelten nur in den Typen `image_editor_*`. Für den Alt-Text nutzt image_editor die Regel von media_srcset. |
 
 ## Für Entwickler
 
