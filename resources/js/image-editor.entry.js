@@ -83,6 +83,7 @@ function init(scope = document) {
         <div class="ie-pv" data-ie-focus title="Ins Bild klicken: Fokuspunkt setzen">
           <img src="${esc(m.url)}" alt="" draggable="false"><span class="ie-pv__dot" style="left:${f.x}%;top:${f.y}%"></span>
         </div>
+        <p class="ie-orig"><a href="${esc(m.original)}" target="_blank" rel="noopener">Original ansehen</a>${m.original_size ? ` · ${m.original_size.w} × ${m.original_size.h} px` : ''}</p>
         <div class="ie-bar" role="toolbar" aria-label="Bild bearbeiten">${EDIT_TOOLS.map((k) => `<button type="button" class="ie-bar__btn" data-ie-tool="${k}"><span>${esc(LABELS[k])}</span></button>`).join('')}</div>
         <p class="help-block">Fokuspunkt: ins Bild klicken (z. B. aufs Gesicht). Dieser Bereich bleibt in jedem Format sichtbar.</p>
         <h4 class="ie-sec">Zuschnitte je Format <small>– klicken zum Zoomen und Zuschneiden</small></h4>

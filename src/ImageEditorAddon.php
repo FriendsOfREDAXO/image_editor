@@ -42,7 +42,10 @@ final class ImageEditorAddon extends Addon
         if (Core::isBackend() && str_starts_with(Request::get('page', 'string'), 'mediapool')) {
             self::assets();
             Extension::register('MEDIA_DETAIL_SIDEBAR', static function (ExtensionPoint $ep): string {
-                return (string) $ep->subject . self::sidebar((string) $ep->getParam('filename'));
+                // Bearbeitbare Bilder: unsere Vorschau (mit Fokuspunkt) ersetzt die des Medienpools – keine doppelte Vorschau
+                $panel = self::sidebar((string) $ep->getParam('filename'));
+
+                return str_contains($panel, 'data-image-editor=') ? $panel : (string) $ep->subject . $panel;
             });
         }
     }
