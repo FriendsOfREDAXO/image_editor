@@ -1,6 +1,6 @@
 # image_editor – Bilder bearbeiten für REDAXO 6
 
-> Für **REDAXO 5** gibt es den Zweig [`5.x`](https://github.com/FriendsOfREDAXO/image_editor/tree/5.x) (gleiche Oberfläche, mit media_negotiator, focuspoint und media_srcset).
+> Für **REDAXO 5** gibt es den Zweig [`5.x`](https://github.com/FriendsOfREDAXO/image_editor/tree/5.x): nur die Zuschnitte je Format samt Ausgabe – Bearbeitung und Fokuspunkt übernehmen dort MediaPlace und focuspoint, AVIF/WebP media_negotiator.
 
 Zerstörungsfreie Bildbearbeitung für den Medienpool (aus KLXM Studio, MIT): **Zuschneiden, Drehen, Spiegeln, Ausrichten,
 Entzerren**, dazu **Anpassen** (Effekte, Sättigung, Helligkeit, Kontrast, Schärfe), **Fokuspunkt/Einpassen** und
