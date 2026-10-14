@@ -14,7 +14,7 @@ use Redaxo\Core\Security\BackendLogin;
 use Throwable;
 
 /**
- * Laden und Speichern für den Editor-Dialog: `?rex-api-call=image_editor&_csrf_token=…` (POST: file, action=info|save, ops).
+ * Laden und Speichern für den Editor-Dialog: `?rex-api-call=image_editor&_csrf_token=…` (POST: file, action=info|save|adjust|crop, ops | fx,focus,fit | ratio,rect).
  * Auch auf der Website aufrufbar (published) – nur mit Backend-Sitzung und Recht auf den Medienpool bzw. die Kategorie.
  */
 #[AsApiFunction('image_editor')]
@@ -35,6 +35,7 @@ final class Api extends ApiFunction
             }
             $data = match (Request::post('action', 'string', 'info')) {
                 'save' => ImageEditor::save($file, json_decode(Request::post('ops', 'string', ''), true) ?? []),
+                'crop' => ImageEditor::saveCrop($file, Request::post('ratio', 'string', ''), json_decode(Request::post('rect', 'string', 'null'), true)),
                 'adjust' => ImageEditor::saveAdjust($file, Request::post('fx', 'string', ''), json_decode(Request::post('focus', 'string', ''), true), Request::post('fit', 'string', 'cover')),
                 default => ImageEditor::info($file),
             };

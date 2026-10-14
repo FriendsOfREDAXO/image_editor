@@ -153,3 +153,44 @@
 .ia-frame img { width: 100%; border-radius: 4px; background: repeating-conic-gradient(#e7e9ee 0 25%, #fff 0 50%) 0 0 / 12px 12px; }
 .ia-frame--16-9 img { aspect-ratio: 16/9; } .ia-frame--1-1 img { aspect-ratio: 1; } .ia-frame--4-5 img { aspect-ratio: 4/5; }
 .ia-frame small { font-size: 11px; color: var(--adm-t3); }
+
+/* Ausschnitt je Bildformat (resources/js/_crop.js, aus Studio admin.css „Zuschneiden“) */
+.cr{width:min(1100px,calc(100vw - 32px));height:min(860px,calc(100vh - 32px));max-width:none;max-height:none;padding:0;border:0;border-radius:10px;background:#1C1C1E;color:#fff;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.5);font:400 14px/1.5 var(--adm-font)}
+.cr[open]{display:flex;flex-direction:column}
+.cr::backdrop{background:rgba(0,0,0,.55)}
+.cr-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 20px;padding:14px 18px}
+.cr-head h2{margin:0;font-size:16px;color:#fff}
+.cr-head h2 span{margin-left:6px;font-weight:400;color:#A1A1A6}
+.cr-ratios{display:flex;flex-wrap:wrap;gap:4px;padding:3px;border-radius:6px;background:rgba(255,255,255,.08)}
+.cr-ratios button{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:0 10px;border:0;border-radius:7px;background:none;color:#D1D1D6;font:600 12px var(--adm-font);cursor:pointer}
+.cr-ratios button:hover{background:rgba(255,255,255,.08)}
+.cr-ratios button[aria-selected=true]{background:#fff;color:#1C1C1E}
+.cr-ratios .is-set::after{content:"";width:6px;height:6px;border-radius:50%;background:#EDE9E3}
+.cr-ratios em{font-style:normal;padding:0 5px;border-radius:4px;background:#EDE9E3;color:#1C1C1E;font-size:10px}
+.cr-shape{display:inline-block;height:12px;border:1.5px solid currentColor;border-radius:2px}
+.cr-view{position:relative;flex:1;min-height:0;overflow:hidden;background:#0E0E0F;cursor:grab;touch-action:none;outline:none}
+.cr-view.is-drag{cursor:grabbing}
+.cr-view:focus-visible .cr-frame{outline:2px solid #EDE9E3;outline-offset:3px}
+.cr-view img{position:absolute;left:0;top:0;max-width:none;transform-origin:0 0;user-select:none;pointer-events:none}
+.cr-frame{position:absolute;box-shadow:0 0 0 9999px rgba(14,14,15,.62);border:1.5px solid rgba(255,255,255,.9);pointer-events:none}
+.cr-frame i{position:absolute;background:rgba(255,255,255,.35)}
+.cr-frame i:nth-child(1){left:33.33%;top:0;bottom:0;width:1px}
+.cr-frame i:nth-child(2){left:66.66%;top:0;bottom:0;width:1px}
+.cr-frame i:nth-child(3){top:33.33%;left:0;right:0;height:1px}
+.cr-frame i:nth-child(4){top:66.66%;left:0;right:0;height:1px}
+.cr-bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px 18px;border-top:1px solid rgba(255,255,255,.08)}
+.cr-bar input[type=range]{width:min(320px,40vw);accent-color:#EDE9E3}
+.cr-z{width:30px;height:30px;border:0;border-radius:50%;background:rgba(255,255,255,.1);color:#fff;font:600 18px/1 var(--adm-font);cursor:pointer}
+.cr-z:hover{background:rgba(255,255,255,.2)}
+.cr-info{color:#A1A1A6;font-size:12px}
+.cr-info.is-warn{color:#FFB86B}
+.cr-spacer{flex:1}
+.cr-err{margin:0;padding:0 18px;color:#FF9B9B}
+.cr-err[hidden]{display:none}
+.cr .adm-btn--ghost{color:#fff;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.3);background:none}
+.cr .adm-btn--ghost:hover{background:rgba(255,255,255,.08)}
+.cr .adm-btn--primary{background:#fff;color:#1C1C1E}
+.cr .adm-btn--primary:hover{background:#EDE9E3}
+.cr-foot{display:flex;align-items:center;gap:10px;padding:12px 18px 16px}
+.cr-help{flex:1;margin:0;color:#8E8E93;font-size:12px}
+@media (max-width:640px){.cr-help{display:none}}

@@ -1,7 +1,9 @@
 # image_editor – Bilder bearbeiten für REDAXO 6
 
 Zerstörungsfreie Bildbearbeitung für den Medienpool (aus KLXM Studio, MIT): **Zuschneiden, Drehen, Spiegeln, Ausrichten,
-Entzerren**, dazu **Anpassen** (Effekte, Sättigung, Helligkeit, Kontrast, Schärfe) und **Fokuspunkt/Einpassen**.
+Entzerren**, dazu **Anpassen** (Effekte, Sättigung, Helligkeit, Kontrast, Schärfe), **Fokuspunkt/Einpassen** und
+**Ausschnitt je Bildformat**: Für 16:9, 4:3, 1:1, 4:5 … legst du je Format selbst fest, welcher Teil des Bildes zu sehen
+ist, wenn der Fokuspunkt nicht reicht.
 Das Original im Medienpool bleibt unverändert – gespeichert werden nur die Schritte.
 
 ## Voraussetzungen und Installation
@@ -21,18 +23,35 @@ Nach Updates (`composer update`) wieder `php bin/console migrate` – das kopier
 
 ## Nutzung
 
-- **Medienpool:** in der Seitenleiste eines Bildes „Bearbeiten“ bzw. „Anpassen“.
-- **fluid:** an jedem Bild auf der Website und in Bildfeldern der Blöcke.
+- **Medienpool:** in der Seitenleiste eines Bildes „Bearbeiten“, „Anpassen“, „Fokus & Einpassen“ oder „Ausschnitt je Format“.
+- **fluid:** an jedem Bild auf der Website und in Bildfeldern der Blöcke. Steht ein Bild in einem festen Format,
+  erscheint zusätzlich **„Ausschnitt“**: Der Dialog öffnet mit diesem Format, die anderen Formate lassen sich daneben
+  wählen.
+
+**Ausschnitt je Format:**
+- Ziehen verschiebt, Mausrad oder Zwei-Finger-Geste zoomt, die Pfeiltasten verschieben ebenfalls.
+- „Automatisch (Fokuspunkt)“ bzw. ein Doppelklick nimmt den eigenen Ausschnitt wieder weg; dann schneidet das Bild
+  wieder um den Fokuspunkt.
+- Ein Punkt am Format zeigt, dass es einen eigenen Ausschnitt hat.
+- Ändert sich das Bild selbst (Zuschneiden, Drehen …), werden die Ausschnitte zurückgesetzt, weil sie nicht mehr passen.
 
 ## Für Entwickler
 
-- Speicher: Spalte `rex_media.image_editor` (JSON: `ops`, `orig`, `fx`, `focus`, `fit`, `at`); bearbeitete Fassung
+- Speicher: Spalte `rex_media.image_editor` (JSON: `ops`, `orig`, `fx`, `focus`, `fit`, `crops`, `at`); bearbeitete Fassung
   unter `data/addons/image_editor/master/`.
 - Ausgabe über den Media Manager: Typen `image_editor` (volle Größe) und `image_editor_320 … _2560` (AVIF/WebP je nach
   Browser), `image_editor_base` (ohne Anpassung, für die Vorschau).
-- `ImageEditor::url($datei, $breite)`, `::srcset($datei)` und `::imgStyle($datei)` (object-position/-fit für den
+- Je Format: `image_editor_{a}x{b}_{breite}`, z. B. `image_editor_16x9_960` (Formate in `ImageEditor::RATIOS`: 16:9,
+  16:10, 21:9, 3:2, 4:3, 1:1, 4:5, 3:4). Ausgeliefert wird der eigene Ausschnitt (`crops`), sonst das größte Rechteck um
+  den Fokuspunkt. Das Bild hat danach genau das Format, im Rahmen schneidet CSS nichts mehr ab.
+- `ImageEditor::url($datei, $breite, $format)`, `::srcset($datei, $format)`, `::size($datei, $format)` (Format optional,
+  z. B. `'16:9'`) und `::imgStyle($datei)` (object-position/-fit für den
   Fokuspunkt). Eigene Media-Manager-Typen: `ImageEditor::useEdited($context)` am Anfang von `process()`.
-- API: `index.php?rex-api-call=image_editor` (`action` = `info`, `save`, `adjust`) – Rechte des Medienpools.
+- API: `index.php?rex-api-call=image_editor` (`action` = `info`, `save`, `adjust`, `crop` mit `ratio` und `rect` als
+  Anteile `{x, y, w, h}` oder `null`) – Rechte des Medienpools.
+- JS: `ImageEditor.crop({ file, api, ratio })` öffnet den Dialog „Ausschnitt je Format“.
+- Quellen der Oberfläche in `resources/js`, gebaut mit esbuild:
+  `esbuild resources/js/image-editor.entry.js --bundle --minify --format=iife --target=es2020 --outfile=assets/image-editor.js`
 
 ## Lizenz
 

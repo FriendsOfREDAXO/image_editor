@@ -32,6 +32,8 @@ final class ImageEditor
     public const string COLUMN = 'image_editor';
     /** Breiten der Media-Manager-Typen image_editor_{w} */
     public const array WIDTHS = [320, 640, 960, 1280, 1920, 2560];
+    /** Bildformate mit eigenem Ausschnitt (Media-Manager-Typen image_editor_{a}x{b}_{w}, MediaType\RatioImage) */
+    public const array RATIOS = ['16:9', '16:10', '21:9', '3:2', '4:3', '1:1', '4:5', '3:4'];
 
     /** @return array<string, mixed> gespeicherte Angaben ({ops, orig, at}) */
     public static function stored(string $file): array
@@ -80,10 +82,17 @@ final class ImageEditor
         }
     }
 
-    /** Adresse in einer Breite (Media-Manager-Typ image_editor_{w}; 0 = volle Größe) */
-    public static function url(string $file, int $width = 1280): string
+    /**
+     * Adresse in einer Breite (Media-Manager-Typ image_editor_{w}; 0 = volle Größe). Mit $ratio (z. B. '16:9'): Bild in
+     * diesem Format – eigener Ausschnitt, sonst um den Fokuspunkt (image_editor_{a}x{b}_{w}).
+     */
+    public static function url(string $file, int $width = 1280, ?string $ratio = null): string
     {
         $type = 'image_editor';
+        if (null !== $ratio && in_array($ratio, self::RATIOS, true)) {
+            $type .= '_' . str_replace(':', 'x', $ratio);
+            $width = max(1, $width);
+        }
         if ($width > 0) {
             $w = self::WIDTHS[0];
             foreach (self::WIDTHS as $candidate) {
@@ -100,34 +109,118 @@ final class ImageEditor
         return MediaManager::getUrl($type, $file, max($at, $media?->updateDate ?? 0));
     }
 
-    /** srcset über alle Breiten (bis zur Breite der bearbeiteten Fassung bzw. des Originals) */
-    public static function srcset(string $file): string
+    /** srcset über alle Breiten (bis zur Breite der bearbeiteten Fassung bzw. des Ausschnitts) */
+    public static function srcset(string $file, ?string $ratio = null): string
     {
-        [$w] = self::size($file);
+        [$w] = self::size($file, $ratio);
         $out = [];
         foreach (self::WIDTHS as $width) {
             if ($w > 0 && $width > $w * 1.15 && $out) {
                 break;
             }
-            $out[] = self::url($file, $width) . ' ' . min($width, $w ?: $width) . 'w';
+            $out[] = self::url($file, $width, $ratio) . ' ' . min($width, $w ?: $width) . 'w';
         }
 
         return implode(', ', $out);
     }
 
-    /** @return array{int, int} Breite und Höhe der Ausgabe (bearbeitet oder Original) */
-    public static function size(string $file): array
+    /** @return array{int, int} Breite und Höhe der Ausgabe (bearbeitet oder Original; mit $ratio: des Ausschnitts) */
+    public static function size(string $file, ?string $ratio = null): array
     {
         $media = Media::get($file);
         if (!$media) {
             return [0, 0];
         }
         $ops = self::ops($file);
-        if ([] === $ops || !$media->width || !$media->height) {
-            return [(int) $media->width, (int) $media->height];
+        $size = [] === $ops || !$media->width || !$media->height
+            ? [(int) $media->width, (int) $media->height]
+            : ImageEdit::outputSize($media->width, $media->height, $ops);
+        if (null !== $ratio && in_array($ratio, self::RATIOS, true) && $size[0] > 0 && $size[1] > 0) {
+            [, , $w, $h] = self::cropBox($file, $ratio, $size[0], $size[1]);
+
+            return [$w, $h];
         }
 
-        return ImageEdit::outputSize($media->width, $media->height, $ops);
+        return $size;
+    }
+
+    /** @return array<string, array{x: float, y: float, w: float, h: float}> eigene Ausschnitte je Format (Anteile 0–1) */
+    public static function crops(string $file): array
+    {
+        $c = self::stored($file)['crops'] ?? [];
+
+        return is_array($c) ? array_filter($c, static fn ($r, $k) => in_array($k, self::RATIOS, true) && is_array($r), ARRAY_FILTER_USE_BOTH) : [];
+    }
+
+    /**
+     * Ausschnitt in Pixeln für ein Format auf einem Bild der Größe $W × $H: eigener Ausschnitt (genau im Seitenverhältnis),
+     * sonst so groß wie möglich um den Fokuspunkt.
+     *
+     * @return array{int, int, int, int} x, y, Breite, Höhe
+     */
+    public static function cropBox(string $file, string $ratio, int $W, int $H): array
+    {
+        [$a, $b] = array_map('intval', explode(':', $ratio)) + [1, 1];
+        $ar = $a > 0 && $b > 0 ? $a / $b : 1;
+        $c = self::crops($file)[$ratio] ?? null;
+        if (null !== $c) {
+            $w = max(1, (int) round($c['w'] * $W));
+            $h = (int) round($w / $ar);
+            if ($h > $H) {
+                $h = $H;
+                $w = (int) round($h * $ar);
+            }
+            $x = (int) round(min(max(0, $c['x']) * $W, $W - $w));
+            $y = (int) round(min(max(0, $c['y']) * $H, $H - $h));
+
+            return [max(0, $x), max(0, $y), min($w, $W), min($h, $H)];
+        }
+        // automatisch: größtes Rechteck im Format, Mitte möglichst auf dem Fokuspunkt
+        $w = $W;
+        $h = (int) round($W / $ar);
+        if ($h > $H) {
+            $h = $H;
+            $w = (int) round($H * $ar);
+        }
+        $f = Adjust::focus(self::stored($file)['focus'] ?? null) ?? ['x' => 50, 'y' => 50];
+        $x = (int) round(min(max(0, $f['x'] / 100 * $W - $w / 2), $W - $w));
+        $y = (int) round(min(max(0, $f['y'] / 100 * $H - $h / 2), $H - $h));
+
+        return [$x, $y, max(1, $w), max(1, $h)];
+    }
+
+    /**
+     * Ausschnitt für ein Format festlegen ($rect = Anteile x, y, w, h zwischen 0 und 1 auf der bearbeiteten Fassung) oder
+     * mit null entfernen (wieder automatisch um den Fokuspunkt).
+     *
+     * @return array<string, mixed> Angaben für den Editor (info())
+     */
+    public static function saveCrop(string $file, string $ratio, mixed $rect): array
+    {
+        $media = Media::get($file) ?? throw new RuntimeException('Bild nicht gefunden.');
+        if (null !== ($why = self::editable($media))) {
+            throw new RuntimeException($why);
+        }
+        if (!in_array($ratio, self::RATIOS, true)) {
+            throw new RuntimeException('Unbekanntes Bildformat.');
+        }
+        $data = self::stored($file);
+        $crops = self::crops($file);
+        unset($crops[$ratio]);
+        if (is_array($rect)) {
+            $f = static fn (string $k): float => round(max(0.0, min(1.0, (float) ($rect[$k] ?? 0))), 5);
+            if ($f('w') <= 0 || $f('h') <= 0) {
+                throw new RuntimeException('Ungültiger Ausschnitt.');
+            }
+            $crops[$ratio] = ['x' => $f('x'), 'y' => $f('y'), 'w' => $f('w'), 'h' => $f('h')];
+        }
+        unset($data['crops']);
+        if ([] !== $crops) {
+            $data['crops'] = $crops;
+        }
+        self::store($file, $data);
+
+        return self::info($file);
     }
 
     /**
@@ -149,7 +242,8 @@ final class ImageEditor
         foreach (['jpg', 'png'] as $ext) {
             @unlink(Path::addonData('image_editor', 'master/' . $file . '.' . $ext));
         }
-        $keep = array_intersect_key(self::stored($file), array_flip(['fx', 'focus', 'fit']));
+        // Ausschnitte je Format gelten für die bisherige Fassung – nur behalten, wenn sich an ihr nichts ändert
+        $keep = array_intersect_key(self::stored($file), array_flip($clean == self::ops($file) ? ['fx', 'focus', 'fit', 'crops'] : ['fx', 'focus', 'fit']));
         $stored = null;
         if ([] !== $clean) {
             $src = Path::media($file);
@@ -273,6 +367,8 @@ final class ImageEditor
             'fx_label' => Adjust::label(self::fx($file)),
             'focus' => Adjust::focus(self::stored($file)['focus'] ?? null) ?? ['x' => 50, 'y' => 50],
             'fit' => Adjust::fit(self::stored($file)['fit'] ?? ''),
+            'crops' => self::crops($file),
+            'ratios' => self::RATIOS,
             'presets' => Adjust::PRESETS,
             'editable' => self::editable($media),
             'pool' => false,
