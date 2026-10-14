@@ -1,0 +1,34 @@
+# REDAXO 5 zum Testen: docker compose -f tests/compose.yml up -d  →  http://127.0.0.1:8185/redaxo/ (admin / admin-test-5)
+name: image-editor-r5
+services:
+  redaxo:
+    image: friendsofredaxo/redaxo:5-stable
+    ports: ["127.0.0.1:8185:80"]
+    volumes:
+      - ./data/html:/var/www/html
+      - ..:/addon   # nach der Einrichtung verlinkt: redaxo/src/addons/image_editor → /addon
+    environment:
+      REDAXO_SERVER: http://127.0.0.1:8185/
+      REDAXO_SERVERNAME: image_editor R5
+      REDAXO_LANG: de_de
+      REDAXO_TIMEZONE: Europe/Berlin
+      REDAXO_ERROR_EMAIL: test@example.org
+      REDAXO_DB_CHARSET: utf8mb4
+      REDAXO_DB_HOST: db
+      REDAXO_DB_NAME: redaxo
+      REDAXO_DB_LOGIN: redaxo
+      REDAXO_DB_PASSWORD: redaxo-test
+      REDAXO_ADMIN_USER: admin
+      REDAXO_ADMIN_PASSWORD: admin-test-5
+    depends_on: [db]
+  db:
+    image: mariadb:11.6
+    environment:
+      MARIADB_DATABASE: redaxo
+      MARIADB_USER: redaxo
+      MARIADB_PASSWORD: redaxo-test
+      MARIADB_RANDOM_ROOT_PASSWORD: "1"
+    volumes:
+      - db:/var/lib/mysql
+volumes:
+  db:
