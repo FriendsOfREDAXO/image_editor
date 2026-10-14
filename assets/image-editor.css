@@ -209,3 +209,4 @@
 .ie-thumb:hover .ie-thumb__img,.ie-thumb:focus-visible .ie-thumb__img{box-shadow:0 0 0 2px var(--adm-a)}
 .ie-thumb.is-set .ie-thumb__r::after{content:"";display:inline-block;width:6px;height:6px;margin-left:5px;border-radius:50%;background:var(--adm-a);vertical-align:2px}
 .ie-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin:0}
+.ie-orig{margin:-4px 0 0;font-size:12px;color:#6c757d}

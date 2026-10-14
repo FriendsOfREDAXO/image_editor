@@ -42,6 +42,9 @@ if (rex::isBackend() && rex::getUser() && 'mediapool' === rex_be_controller::get
     rex_view::addCssFile($this->getAssetsUrl('image-editor.css'));
     rex_view::addJsFile($this->getAssetsUrl('image-editor.js'));
     rex_extension::register('MEDIA_DETAIL_SIDEBAR', static function (rex_extension_point $ep): string {
-        return (string) $ep->getSubject() . ImageEditor::sidebar((string) $ep->getParam('filename'));
+        // Bearbeitbare Bilder: unsere Vorschau (mit Fokuspunkt) ersetzt die des Medienpools – keine doppelte Vorschau
+        $panel = ImageEditor::sidebar((string) $ep->getParam('filename'));
+
+        return str_contains($panel, 'data-image-editor=') ? $panel : (string) $ep->getSubject() . $panel;
     });
 }
