@@ -3,12 +3,22 @@
 > **Zweig `5.x` = REDAXO 5.** Die Version für REDAXO 6 liegt im Zweig
 > [`main`](https://github.com/FriendsOfREDAXO/image_editor). Dort ist auch die Bildbearbeitung eingebaut.
 
-In REDAXO 5 erledigen andere AddOns schon vieles:
-- [MediaPlace](https://github.com/FriendsOfREDAXO/mediaplace) bearbeitet Bilder (Zuschneiden, Drehen, Spiegeln,
-  Ausrichten, Perspektive, Tonwerte),
-- [focuspoint](https://github.com/FriendsOfREDAXO/focuspoint) verwaltet den Fokuspunkt.
+## Idealer Partner: MediaPlace
 
-image_editor ergänzt, was dort fehlt:
+image_editor ist als Ergänzung zu [MediaPlace](https://github.com/FriendsOfREDAXO/mediaplace) gedacht. Zusammen deckt das
+alles ab, was die Redaktion an einem Bild tun muss, in **einer** Detailansicht:
+
+| | MediaPlace | image_editor |
+|---|---|---|
+| Bild bearbeiten (Zuschneiden, Drehen, Spiegeln, Ausrichten, Perspektive, Tonwerte) | ✓ | |
+| Fokuspunkt (mit [focuspoint](https://github.com/FriendsOfREDAXO/focuspoint)) | ✓ | nutzt ihn |
+| Alt-Text, Tags, Sammlungen | ✓ | nutzt den Alt-Text |
+| **Eigener Ausschnitt je Format** (16:9, 4:3, 1:1 …) | | ✓ – als Feld in der MediaPlace-Detailansicht |
+| Ausgabe in Formaten mit `srcset`, AVIF/WebP (mit [media_negotiator](https://github.com/FriendsOfREDAXO/media_negotiator)) | | ✓ |
+
+Es funktioniert auch ohne MediaPlace (Box im klassischen Medienpool), aber erst mit MediaPlace ist alles an einem Ort.
+
+image_editor ergänzt also:
 
 - **Zuschnitte je Format** (16:9, 16:10, 21:9, 3:2, 4:3, 1:1, 4:5, 3:4): Reicht der Fokuspunkt nicht, legt die Redaktion
   je Format selbst fest, welcher Ausschnitt zu sehen ist. Ohne eigenen Ausschnitt wird um den Fokuspunkt geschnitten.
@@ -21,7 +31,8 @@ image_editor ergänzt, was dort fehlt:
 1. Den Inhalt dieses Zweigs als Ordner `redaxo/src/addons/image_editor` ablegen (ZIP:
    [5.x herunterladen](https://github.com/FriendsOfREDAXO/image_editor/archive/refs/heads/5.x.zip)).
 2. Im Backend unter AddOns installieren.
-3. Empfohlen: focuspoint (Fokuspunkt) und media_negotiator (AVIF/WebP). Ohne media_negotiator liefert image_editor WebP.
+3. Empfohlen: **MediaPlace** (Bearbeitung und Detailansicht), **focuspoint** (Fokuspunkt) und **media_negotiator**
+   (AVIF/WebP). Ohne media_negotiator liefert image_editor WebP.
 
 Voraussetzungen: REDAXO ab 5.17 mit Media Manager und Medienpool, PHP ab 8.1 mit GD.
 
