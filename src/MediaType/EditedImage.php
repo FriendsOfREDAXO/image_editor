@@ -5,7 +5,7 @@ namespace FriendsOfRedaxo\ImageEditor\MediaType;
 use FriendsOfRedaxo\ImageEditor\Adjust;
 use FriendsOfRedaxo\ImageEditor\ImageEditor;
 use Override;
-use Redaxo\Core\MediaManager\Attribute\AsMediaType;
+use Redaxo\Core\MediaManager\AsMediaType;
 use Redaxo\Core\MediaManager\MediaContext;
 use Redaxo\Core\MediaManager\MediaType;
 use Redaxo\Core\MediaManager\NegotiatesFormat;
