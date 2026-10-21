@@ -11,6 +11,8 @@ use Redaxo\Core\ExtensionPoint\Extension;
 use Redaxo\Core\ExtensionPoint\ExtensionPoint;
 use Redaxo\Core\Filesystem\Url;
 use Redaxo\Core\Http\Request;
+use Redaxo\Core\MediaPool\ExtensionPoint\MediaDeleted;
+use Redaxo\Core\MediaPool\ExtensionPoint\MediaUpdated;
 use Redaxo\Core\MediaPool\Media;
 use Redaxo\Core\View\Asset;
 
@@ -29,15 +31,14 @@ final class ImageEditorAddon extends Addon
     public function boot(): void
     {
         // Original ersetzt (andere Maße) oder gelöscht: Bearbeitung passt nicht mehr
-        Extension::register('MEDIA_UPDATED', static function (ExtensionPoint $ep): void {
-            $file = (string) $ep->getParam('filename');
-            $orig = ImageEditor::stored($file)['orig'] ?? null;
-            $media = Media::get($file);
-            if ($orig && $media && !\in_array([$media->width, $media->height], [[$orig['w'], $orig['h']], [$orig['h'], $orig['w']]], true)) {
-                ImageEditor::forget($file);
+        Extension::register(MediaUpdated::class, static function (MediaUpdated $ep): void {
+            $media = $ep->media;
+            $orig = ImageEditor::stored($media->fileName)['orig'] ?? null;
+            if ($orig && !\in_array([$media->width, $media->height], [[$orig['w'], $orig['h']], [$orig['h'], $orig['w']]], true)) {
+                ImageEditor::forget($media->fileName);
             }
         });
-        Extension::register('MEDIA_DELETED', static fn (ExtensionPoint $ep) => ImageEditor::forget((string) $ep->getParam('filename')));
+        Extension::register(MediaDeleted::class, static fn (MediaDeleted $ep) => ImageEditor::forget($ep->media->fileName));
 
         if (Core::isBackend() && str_starts_with(Request::get('page', 'string'), 'mediapool')) {
             self::assets();
