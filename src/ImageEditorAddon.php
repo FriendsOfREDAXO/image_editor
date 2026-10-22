@@ -8,10 +8,10 @@ use Redaxo\Core\Core;
 use Redaxo\Core\Database\Column;
 use Redaxo\Core\Database\Table;
 use Redaxo\Core\ExtensionPoint\Extension;
-use Redaxo\Core\ExtensionPoint\ExtensionPoint;
 use Redaxo\Core\Filesystem\Url;
 use Redaxo\Core\Http\Request;
 use Redaxo\Core\MediaPool\ExtensionPoint\MediaDeleted;
+use Redaxo\Core\MediaPool\ExtensionPoint\MediaDetailSidebar;
 use Redaxo\Core\MediaPool\ExtensionPoint\MediaUpdated;
 use Redaxo\Core\MediaPool\Media;
 use Redaxo\Core\View\Asset;
@@ -42,9 +42,9 @@ final class ImageEditorAddon extends Addon
 
         if (Core::isBackend() && str_starts_with(Request::get('page', 'string'), 'mediapool')) {
             self::assets();
-            Extension::register('MEDIA_DETAIL_SIDEBAR', static function (ExtensionPoint $ep): string {
+            Extension::register(MediaDetailSidebar::class, static function (MediaDetailSidebar $ep): string {
                 // Bearbeitbare Bilder: unsere Vorschau (mit Fokuspunkt) ersetzt die des Medienpools – keine doppelte Vorschau
-                $panel = self::sidebar((string) $ep->getParam('filename'));
+                $panel = self::sidebar($ep->media->fileName);
 
                 return str_contains($panel, 'data-image-editor=') ? $panel : (string) $ep->subject . $panel;
             });
