@@ -77,6 +77,8 @@ echo ImageEditor::picture('bild.jpg', '16:9', ['(max-width: 639px)' => '4:5'], '
   unter `data/addons/image_editor/master/`.
 - Ausgabe über den Media Manager: Typen `image_editor` (volle Größe) und `image_editor_320 … _2560` (AVIF/WebP je nach
   Browser), `image_editor_base` (ohne Anpassung, für die Vorschau).
+- Vorschaubild für soziale Netzwerke: `image_editor_share` – 1200 × 630 als JPEG (ohne WebP/AVIF), eigener Ausschnitt im
+  Format 40:21 oder um den Fokuspunkt; `ImageEditor::shareUrl('bild.jpg')`.
 - Je Format: `image_editor_{a}x{b}_{breite}`, z. B. `image_editor_16x9_960` (Formate in `ImageEditor::RATIOS`: 16:9,
   16:10, 21:9, 3:2, 4:3, 1:1, 4:5, 3:4). Ausgeliefert wird der eigene Ausschnitt (`crops`), sonst das größte Rechteck um
   den Fokuspunkt. Das Bild hat danach genau das Format, im Rahmen schneidet CSS nichts mehr ab.

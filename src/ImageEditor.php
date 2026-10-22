@@ -109,6 +109,21 @@ final class ImageEditor
         return MediaManager::getUrl($type, $file, max($at, $media?->updateDate ?? 0));
     }
 
+    /**
+     * Vorschaubild für soziale Netzwerke (og:image): 1200 × 630 als JPEG, Ausschnitt um den Fokuspunkt (MediaType\ShareImage).
+     * null für Dateien ohne Bildwerkzeuge (SVG, GIF, Video …).
+     */
+    public static function shareUrl(string $file): ?string
+    {
+        $media = Media::get($file);
+        if (null === $media || !in_array(strtolower(pathinfo($file, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'webp', 'avif'], true)) {
+            return null;
+        }
+        $at = (int) (self::stored($file)['at'] ?? 0);
+
+        return MediaManager::getUrl('image_editor_share', $file, max($at, $media->updateDate));
+    }
+
     /** srcset über alle Breiten (bis zur Breite der bearbeiteten Fassung bzw. des Ausschnitts) */
     public static function srcset(string $file, ?string $ratio = null): string
     {
