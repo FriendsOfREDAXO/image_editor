@@ -10,7 +10,7 @@
  * API (assets: ImageEditorAddon::config()['api']): POST file, action=info|save, ops → { ok, item | error }.
  */
 import { editImage, EDIT_TOOLS } from './_imageedit.js';
-import { setLayer } from './_shadow.js';
+import { setLayer, applyCss } from './_shadow.js';
 import { adjustImage } from './_adjust.js';
 import { cropImage } from './_crop.js';
 
@@ -73,7 +73,7 @@ function init(scope = document) {
     box.dataset.ieReady = '1';
     const cfg = JSON.parse(box.dataset.imageEditor);
     const state = box.querySelector('[data-image-editor-state]');
-    const fail = (err) => { if (state) { state.textContent = err.message; state.classList.add('text-danger'); } };
+    const fail = (err) => { if (state) { state.textContent = err.message; state.classList.add('ie-help--error'); } };
     let m;
     try { m = await call(cfg.api, { file: cfg.file, action: 'info' }); } catch (err) { fail(err); return; }
 
@@ -81,19 +81,20 @@ function init(scope = document) {
       const f = m.focus || { x: 50, y: 50 };
       box.innerHTML = `
         <div class="ie-pv" data-ie-focus title="Ins Bild klicken: Fokuspunkt setzen">
-          <img src="${esc(m.url)}" alt="" draggable="false"><span class="ie-pv__dot" style="left:${f.x}%;top:${f.y}%"></span>
+          <img src="${esc(m.url)}" alt="" draggable="false"><span class="ie-pv__dot" data-css="left:${f.x}%;top:${f.y}%"></span>
         </div>
         <p class="ie-orig"><a href="${esc(m.original)}" target="_blank" rel="noopener">Original ansehen</a>${m.original_size ? ` · ${m.original_size.w} × ${m.original_size.h} px` : ''}</p>
         <div class="ie-bar" role="toolbar" aria-label="Bild bearbeiten">${EDIT_TOOLS.map((k) => `<button type="button" class="ie-bar__btn" data-ie-tool="${k}"><span>${esc(LABELS[k])}</span></button>`).join('')}</div>
-        <p class="help-block">Fokuspunkt: ins Bild klicken (z. B. aufs Gesicht). Dieser Bereich bleibt in jedem Format sichtbar.</p>
+        <p class="ie-help">Fokuspunkt: ins Bild klicken (z. B. aufs Gesicht). Dieser Bereich bleibt in jedem Format sichtbar.</p>
         <h4 class="ie-sec">Zuschnitte je Format <small>– klicken zum Zoomen und Zuschneiden</small></h4>
         <div class="ie-thumbs">${(m.ratios || []).map((r) => `<button type="button" class="ie-thumb${m.crops?.[r] ? ' is-set' : ''}" data-ie-ratio="${r}" title="${m.crops?.[r] ? 'Eigener Ausschnitt' : 'Automatisch (Fokuspunkt)'}">
-          <span class="ie-thumb__img" style="aspect-ratio:${r.replace(':', '/')}"><img src="${esc(m.thumbs?.[r] || '')}" alt="" loading="lazy"></span><span class="ie-thumb__r">${r}</span></button>`).join('')}</div>
+          <span class="ie-thumb__img" data-css="aspect-ratio:${r.replace(':', '/')}"><img src="${esc(m.thumbs?.[r] || '')}" alt="" loading="lazy"></span><span class="ie-thumb__r">${r}</span></button>`).join('')}</div>
         <h4 class="ie-sec">Anpassen <small>– Effekte, Sättigung, Helligkeit, Kontrast, Schärfe</small></h4>
-        <p class="ie-row"><span>${esc(m.fx_label || 'Original (ohne Anpassung)')}</span><button type="button" class="btn btn-default btn-xs" data-ie-adjust="adjust">Anpassen …</button></p>
+        <p class="ie-row"><span>${esc(m.fx_label || 'Original (ohne Anpassung)')}</span><button type="button" class="rex-button" data-size="xs" data-ie-adjust="adjust">Anpassen …</button></p>
         <h4 class="ie-sec">Darstellung im Rahmen <small>– füllen, einpassen oder Originalformat</small></h4>
-        <p class="ie-row"><span>${esc(FIT_LABEL[m.fit] || FIT_LABEL.cover)}</span><button type="button" class="btn btn-default btn-xs" data-ie-adjust="focus">Rahmen …</button></p>
-        <p class="help-block" data-image-editor-state>${m.edit || m.fx ? '<strong>Bearbeitet</strong> – das Original bleibt erhalten.' : 'Das Original bleibt immer erhalten.'}</p>`;
+        <p class="ie-row"><span>${esc(FIT_LABEL[m.fit] || FIT_LABEL.cover)}</span><button type="button" class="rex-button" data-size="xs" data-ie-adjust="focus">Rahmen …</button></p>
+        <p class="ie-help" data-image-editor-state>${m.edit || m.fx ? '<strong>Bearbeitet</strong> – das Original bleibt erhalten.' : 'Das Original bleibt immer erhalten.'}</p>`;
+      applyCss(box);
     };
     render();
 
@@ -128,4 +129,5 @@ function init(scope = document) {
 window.ImageEditor = { open, adjust, crop, init, setLayer };
 if (document.readyState !== 'loading') init(document);
 else document.addEventListener('DOMContentLoaded', () => init(document));
-if (window.jQuery?.fn) window.jQuery(document).on('rex:ready', (e, c) => init(c?.[0] || document));
+// Backend: neues Markup (z. B. die Detailansicht des Medienpools im Overlay) meldet der Core mit „rex:ready“
+document.addEventListener('rex:ready', (e) => init(e.target instanceof Element ? e.target : document));

@@ -3,7 +3,7 @@
  * Werte wie in KLXM Studio (Core\ImageFx, Core\ImageFit); die Vorschau nutzt CSS-Filter auf der Fassung ohne Anpassung
  * (image_editor_base), der Server rechnet die Anpassung später beim Ausliefern (Adjust::apply).
  */
-import { layerBox } from './_shadow.js';
+import { layerBox, applyCss } from './_shadow.js';
 import { ask } from './_bar.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -90,12 +90,13 @@ export function adjustImage(m, { save, tab = 'adjust' } = {}) {
     const drawAdjust = () => {
       panel.innerHTML = `<h3 class="ia-h">Effekt</h3><div class="ia-presets">`
         + [['', 'Original'], ...Object.entries(presets)].map(([k, l]) => `<button type="button" class="ia-preset${st.fx.p === k ? ' is-on' : ''}" data-preset="${esc(k)}">
-            <span class="ia-preset__pic"><img src="${esc(unamp(m.thumb || m.url))}" alt="" style="filter:${cssFilter({ p: k, s: 100, b: 100, c: 100, k: 0 })}"></span><span>${esc(l)}</span></button>`).join('')
+            <span class="ia-preset__pic"><img src="${esc(unamp(m.thumb || m.url))}" alt="" data-css="filter:${cssFilter({ p: k, s: 100, b: 100, c: 100, k: 0 })}"></span><span>${esc(l)}</span></button>`).join('')
         + `</div>` + Object.entries(RANGES).map(([k, [min, max, label]]) => `<label class="ia-range"><span>${label}</span>
             <input type="range" min="${min}" max="${max}" step="10" value="${st.fx[k]}" data-range="${k}"><output>${st.fx[k]} %</output></label>`).join('')
         + `<label class="ia-range"><span>Schärfe</span><input type="range" min="-100" max="100" step="10" value="${st.fx.k}" data-range="k"><output>${st.fx.k > 0 ? '+' : ''}${st.fx.k}</output></label>
            <p class="f-help">Links weichzeichnen, rechts schärfen.</p>
            <button type="button" class="adm-btn adm-btn--small adm-btn--ghost" data-reset="adjust">Anpassung zurücksetzen</button>`;
+      applyCss(panel);
     };
     const drawFocus = () => {
       const fits = [['cover', 'Füllen', 'Rahmen ganz füllen, Ränder werden abgeschnitten – der Fokuspunkt bleibt sichtbar.'],

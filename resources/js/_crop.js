@@ -6,7 +6,7 @@
  *
  *   cropImage(m, { ratio, only, save })   m = info() des Servers, save(ratio, rect|null) → Promise(item)
  */
-import { layerBox } from './_shadow.js';
+import { layerBox, applyCss } from './_shadow.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const $ = (sel, el) => el.querySelector(sel);
@@ -26,7 +26,7 @@ export function cropImage(m, { ratio = '', only = '', save }) {
     dlg.innerHTML = `
       <div class="cr-head">
         <h2 id="cr-title">Ausschnitt je Format <span>${esc(m.display)}</span></h2>
-        <div class="cr-ratios" role="tablist" aria-label="Bildformat">${ratios.map((r) => `<button type="button" role="tab" data-ratio="${r}"><span class="cr-shape" style="aspect-ratio:${r.replace(':', '/')}"></span>${r}${only === r ? ' <em>hier</em>' : ''}</button>`).join('')}</div>
+        <div class="cr-ratios" role="tablist" aria-label="Bildformat">${ratios.map((r) => `<button type="button" role="tab" data-ratio="${r}"><span class="cr-shape" data-css="aspect-ratio:${r.replace(':', '/')}"></span>${r}${only === r ? ' <em>hier</em>' : ''}</button>`).join('')}</div>
       </div>
       <div class="cr-view" tabindex="0" aria-label="Bildausschnitt: ziehen zum Verschieben, Mausrad oder Plus/Minus zum Zoomen, Pfeiltasten zum Verschieben">
         <img alt="" draggable="false" src="${esc(m.url)}">
@@ -46,6 +46,7 @@ export function cropImage(m, { ratio = '', only = '', save }) {
         <button type="button" class="adm-btn adm-btn--ghost" data-cancel>Abbrechen</button>
         <button type="button" class="adm-btn adm-btn--primary" data-save>Übernehmen</button>
       </div>`;
+    applyCss(dlg);
     const view = $('.cr-view', dlg), img = $('img', view), frame = $('.cr-frame', dlg), slider = $('[data-zoom]', dlg), info = $('.cr-info', dlg);
     const W = m.width, H = m.height;
     const focus = m.focus || { x: 50, y: 50 };

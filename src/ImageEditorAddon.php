@@ -40,8 +40,11 @@ final class ImageEditorAddon extends Addon
         });
         Extension::register(MediaDeleted::class, static fn (MediaDeleted $ep) => ImageEditor::forget($ep->media->fileName));
 
-        if (Core::isBackend() && str_starts_with(Request::get('page', 'string'), 'mediapool')) {
+        // Skript auf allen Seiten des Backends: die Detailansicht des Medienpools öffnet auch als Overlay über anderen Seiten
+        if (Core::isBackend() && Core::getUser()) {
             self::assets();
+        }
+        if (Core::isBackend() && str_starts_with(Request::get('page', 'string'), 'mediapool')) {
             Extension::register(MediaDetailSidebar::class, static function (MediaDetailSidebar $ep): string {
                 // Bearbeitbare Bilder: unsere Vorschau (mit Fokuspunkt) ersetzt die des Medienpools – keine doppelte Vorschau
                 $panel = self::sidebar($ep->media->fileName);
@@ -89,13 +92,13 @@ final class ImageEditorAddon extends Addon
         $info = $why ? null : ImageEditor::info($file);
         $config = json_encode(['file' => $file] + self::config(), JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
 
-        $h = '<section class="panel panel-default image-editor-panel"><header class="panel-heading"><div class="panel-title"><i class="rex-icon fa-crop-simple"></i> Bild bearbeiten</div></header><div class="panel-body">';
+        $h = '<section class="image-editor-panel"><h3 class="image-editor-panel__title"><i class="rex-icon fa-solid fa-crop-simple" aria-hidden="true"></i> Bild bearbeiten</h3><div class="image-editor-panel__body">';
         if ($why) {
-            return $h . '<p class="help-block">' . escape($why) . '</p></div></section>';
+            return $h . '<p class="ie-help">' . escape($why) . '</p></div></section>';
         }
         $h .= '<div class="image-editor-box" data-image-editor="' . escape($config) . '">'
             . '<p class="image-editor-preview"><img src="' . escape($info['url']) . '" alt="" loading="lazy"></p>'
-            . '<p class="help-block" data-image-editor-state>Wird geladen …</p>'
+            . '<p class="ie-help" data-image-editor-state>Wird geladen …</p>'
             . '</div>';
 
         return $h . '</div></section>';
